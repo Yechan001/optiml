@@ -24,3 +24,4 @@ chits22 <schaitra@u.northwestern.edu>
 - Thank you Gaurav Juvekar <gauravjuvekar@gmail.com> for contributions.
 - Thank you rg20 <rajeshgandham@gmail.com> for contributions.
 - Thank you Mehmet Akif ÇÖRDÜK <akifcorduk@gmail.com> for contributions.
+- Thank you Ihar Hrachyshka <ihar.hrachyshka@gmail.com> for contributions.

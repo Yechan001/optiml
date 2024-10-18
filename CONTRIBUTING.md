@@ -30,3 +30,4 @@ chits22 <schaitra@u.northwestern.edu>
 - Thank you Jimmy Hwang <jihunok96@naver.com> for contributions.
 - Thank you Ashwin Bharambe <ashwin@fb.com> for contributions.
 - Thank you dltn <6599399+dltn@users.noreply.github.com> for contributions.
+- Thank you Facebook Community Bot <facebook-github-bot@users.noreply.github.com> for contributions.

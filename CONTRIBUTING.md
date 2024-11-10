@@ -38,3 +38,4 @@ chits22 <schaitra@u.northwestern.edu>
 - Thank you Mehmet Akif ÇÖRDÜK <akifcorduk@gmail.com> for contributions.
 - Thank you Ihar Hrachyshka <ihar.hrachyshka@gmail.com> for contributions.
 - Thank you dothyt <24907190+dothyt@users.noreply.github.com> for contributions.
+- Thank you David Bernal <bernalde@cmu.edu> for contributions.

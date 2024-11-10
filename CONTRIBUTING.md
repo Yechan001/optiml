@@ -39,3 +39,4 @@ chits22 <schaitra@u.northwestern.edu>
 - Thank you Ihar Hrachyshka <ihar.hrachyshka@gmail.com> for contributions.
 - Thank you dothyt <24907190+dothyt@users.noreply.github.com> for contributions.
 - Thank you David Bernal <bernalde@cmu.edu> for contributions.
+- Thank you Jimmy Hwang <jihunok96@naver.com> for contributions.

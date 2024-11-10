@@ -44,3 +44,4 @@ chits22 <schaitra@u.northwestern.edu>
 - Thank you dltn <6599399+dltn@users.noreply.github.com> for contributions.
 - Thank you Facebook Community Bot <facebook-github-bot@users.noreply.github.com> for contributions.
 - Thank you Sébastien Han <seb@redhat.com> for contributions.
+- Thank you Charlie Doern <cdoern@redhat.com> for contributions.

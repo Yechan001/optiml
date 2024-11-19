@@ -8,3 +8,4 @@ chits22 <schaitra@u.northwestern.edu>
 - Thank you Cameron Barrie <cameron.barrie@u.northwestern.edu> for contributions.
 - Thank you emanuel <emanuel.j.gerber@gmail.com> for contributions.
 - Thank you Martino Mensio <martino.mensio@open.ac.uk> for contributions.
+- Thank you dockerised <george@cogitogroup.co.uk> for contributions.

@@ -14,3 +14,4 @@ chits22 <schaitra@u.northwestern.edu>
 - Thank you sam-leeman <sam.leeman@harvard.edu> for contributions.
 - Thank you brianjsl <brianjsl@mit.edu> for contributions.
 - Thank you jimbo797 <jkuhlman@mit.edu> for contributions.
+- Thank you jamesm224 <jamesm22@vt.edu> for contributions.

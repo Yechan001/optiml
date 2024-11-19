@@ -10,3 +10,4 @@ chits22 <schaitra@u.northwestern.edu>
 - Thank you Martino Mensio <martino.mensio@open.ac.uk> for contributions.
 - Thank you dockerised <george@cogitogroup.co.uk> for contributions.
 - Thank you Harper <charlespack2019@u.northwestern.edu> for contributions.
+- Thank you barrieca <cambarrie@comcast.net> for contributions.

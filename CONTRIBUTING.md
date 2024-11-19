@@ -5,3 +5,4 @@ nour-taqatqa <nourtaqatqa2025@u.northwestern.edu>
 chits22 <schaitra@u.northwestern.edu>
 - Thank you chits22 <schaitra@u.northwestern.edu> for contributions.
 - Thank you MarkoSterbentz <stermark@isu.edu> for contributions.
+- Thank you Cameron Barrie <cameron.barrie@u.northwestern.edu> for contributions.

@@ -12,3 +12,4 @@ chits22 <schaitra@u.northwestern.edu>
 - Thank you Harper <charlespack2019@u.northwestern.edu> for contributions.
 - Thank you barrieca <cambarrie@comcast.net> for contributions.
 - Thank you sam-leeman <sam.leeman@harvard.edu> for contributions.
+- Thank you brianjsl <brianjsl@mit.edu> for contributions.

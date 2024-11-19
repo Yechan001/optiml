@@ -13,3 +13,4 @@ chits22 <schaitra@u.northwestern.edu>
 - Thank you barrieca <cambarrie@comcast.net> for contributions.
 - Thank you sam-leeman <sam.leeman@harvard.edu> for contributions.
 - Thank you brianjsl <brianjsl@mit.edu> for contributions.
+- Thank you jimbo797 <jkuhlman@mit.edu> for contributions.

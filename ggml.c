@@ -146,7 +146,7 @@ void ggml_print_backtrace(void) {
 }
 #endif
 
-#define GGML_PERF
+// #define GGML_PERF
 #define GGML_DEBUG 0
 #define GGML_GELU_FP16
 #define GGML_GELU_QUICK_FP16
@@ -14436,6 +14436,7 @@ static void ggml_compute_forward_mul_mat_axpy_dense(
     // 남은 요소의 수를 계산하세요
     int remainder = ne00 % 8;
 
+#if defined(__AVX2__)
     // 벡터화된 컴퓨팅을 위해 AVX 명령어 사용
     for (i = 0; i < ne00 - remainder; i += 8) {
         __m256 res_vec = _mm256_loadu_ps(res + i);  // res에 8개의 부동 소수점 숫자를 로드합니다.
@@ -14448,10 +14449,11 @@ static void ggml_compute_forward_mul_mat_axpy_dense(
     for (i = ne00 - remainder; i < ne00; i++) {
         res[i] += tmp[i];
     }
-    // for (i = 0; i < dst->ne[0]; i++) {
-    //     res[i] += tmp[i];
-    // }
-
+#else
+    for (i = 0; i < dst->ne[0]; i++) {
+        res[i] += tmp[i];
+    }
+#endif
     atomic_flag_clear(&g_axpy_dense_lock);
 
 }
@@ -14586,6 +14588,7 @@ static void ggml_compute_forward_mul_mat_axpy(
         // 남은 요소의 수를 계산하세요
         int remainder = ne00 % 8;
 
+#if defined(__AVX2__)
         // 벡터화된 컴퓨팅을 위해 AVX 명령어 사용
         for (i = 0; i < ne00 - remainder; i += 8) {
             __m256 res_vec = _mm256_loadu_ps(res + i);  // res에 8개의 부동 소수점 숫자를 로드합니다.
@@ -14598,8 +14601,11 @@ static void ggml_compute_forward_mul_mat_axpy(
         for (i = ne00 - remainder; i < ne00; i++) {
             res[i] += tmp[i];
         }
-
-
+#else
+        for (i = 0; i < ne00; i++) {
+            res[i] += tmp[i];
+        }
+#endif
         atomic_flag_clear(&g_axpy_lock);
     }
 
@@ -14733,7 +14739,7 @@ static void ggml_compute_forward_mul_mat_axpy_q4_0(
 
         // 남은 요소의 수를 계산하세요
         int remainder = ne00 % 8;
-
+#if defined(__AVX2__)
         // 벡터화된 컴퓨팅을 위해 AVX 명령어 사용
         for (i = 0; i < ne00 - remainder; i += 8)
         {
@@ -14748,6 +14754,11 @@ static void ggml_compute_forward_mul_mat_axpy_q4_0(
         {
             res[i] += tmp[i];
         }
+#else
+        for (i = 0; i < ne00; i++) {
+            res[i] += tmp[i];
+        }
+#endif
         atomic_flag_clear(&g_axpy_lock);
     }
 
@@ -14869,6 +14880,7 @@ static void ggml_compute_forward_mul_mat_axpy_head(
     // 남은 요소의 수를 계산하세요
     int remainder = ne00 % 8;
 
+#if defined(__AVX2__)
     // 벡터화된 컴퓨팅을 위해 AVX 명령어 사용
     for (i = 0; i < ne00 - remainder; i += 8) {
         __m256 res_vec = _mm256_loadu_ps(res + i);  // res에 8개의 부동 소수점 숫자를 로드합니다.
@@ -14881,10 +14893,11 @@ static void ggml_compute_forward_mul_mat_axpy_head(
     for (i = ne00 - remainder; i < ne00; i++) {
         res[i] += tmp[i];
     }
-    // for (i = 0; i < ne00; i++) {
-    //     res[i] = tmp[i];
-    // }
-
+#else
+    for (i = 0; i < ne00; i++) {
+        res[i] += tmp[i];
+    }
+#endif
     atomic_flag_clear(&g_axpy_head_lock);
 
 }

@@ -70,6 +70,9 @@ class Keys:
         ADD_EOS    = "tokenizer.ggml.add_eos_token"
         HF_JSON    = "tokenizer.huggingface.json"
         RWKV       = "tokenizer.rwkv.world"
+    
+    class Optiml:
+        SPARSE_THRESHOLD = "Optiml.sparse_threshold"
 
 
 #

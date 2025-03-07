@@ -138,12 +138,18 @@ We will release the code and data in the following order, please stay tuned!
 - [ ] Support Multi-GPU
 
 
-## Citation
+## Paper and Citation
+More technical details can be found in our [paper]().
 
 If you find Optiml useful or relevant to your project and research, please kindly cite our paper:
 
 ```bibtex
-Stay tuned!
+@techreport{song2023Optiml,
+  author      = {Yechan Hwang},
+  title       = {Optiml: Fast Large Language Model Serving with a Consumer-grade GPU},
+  institution = {KEAI,Korea Advanced Institute of Science and Technology(한국과학기술원)},
+  year        = {2025}
+}
 ```
 
 ## Acknowledgement

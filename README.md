@@ -110,7 +110,7 @@ We suggest downloading/cloning the whole repo so Optiml can automatically make u
 ├── activation (Profiled activation statistics for fine-grained FFN offloading)
 │   ├── activation_x.pt (Profiled activation statistics for layer x)
 │   └── ...
-├── *.[q4].Optiml.gguf.genearted.gpuidx (Generated GPU index at runtime for corresponding model)
+├── *.[q4].Optiml.gguf.generated.gpuidx (Generated GPU index at runtime for corresponding model)
 ```
 
 ### Convert from Original Model Weights + Predictor Weights

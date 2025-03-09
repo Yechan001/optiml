@@ -193,11 +193,13 @@ More technical details can be found in our [paper]().
 If you find Optiml useful or relevant to your project and research, please kindly cite our paper:
 
 ```bibtex
-@techreport{song2023Optiml,
-  author      = {Yechan Hwang},
-  title       = {Optiml: Fast Large Language Model Serving with a Consumer-grade GPU},
-  institution = {KEAI,Korea Advanced Institute of Science and Technology(한국과학기술원)},
-  year        = {2025}
+@misc{song2023Optiml,
+      title={Optiml: Fast Large Language Model Serving with a Consumer-grade GPU}, 
+      author={Yechan Hwang},
+      year={2023},
+      eprint={2312.12456},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
 }
 ```
 

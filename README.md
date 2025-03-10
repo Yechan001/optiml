@@ -3,6 +3,9 @@
 ## TL;DR
 Optiml is a CPU/GPU LLM inference engine leveraging **activation locality** for your device.
 
+**Latest News** 🔥
+- [2023/12/24] We released an online [gradio demo](https://Optiml-gradio.vercel.app/) for Falcon(ReLU)-40B-FP16!
+- [2023/12/19] We officially released Optiml!
 ## Demo 🔥
 
 https://github.com/KAIST-KEAI/Optiml/assets/34213478/fe441a42-5fce-448b-a3e5-ea4abb43ba23

@@ -11,6 +11,13 @@ Optiml v.s. llama.cpp on a single RTX 4090(24G) running Falcon(ReLU)-40B-FP16 wi
 
 <sub>Both Optiml and llama.cpp were running on the same hardware and fully utilized VRAM on RTX 4090.</sub>
 
+> [!NOTE]
+> **Live Demo Online⚡️**
+>
+> Try out our [Gradio server](https://Optiml-gradio.vercel.app/) hosting Falcon(ReLU)-40B-FP16 on a RTX 4090!
+> 
+> <sub>Experimental and without warranties 🚧</sub>
+
 ## Abstract
 
 We introduce Optiml, a high-speed Large Language Model (LLM) inference engine on a personal computer (PC) 

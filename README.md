@@ -3,6 +3,10 @@
 ## TL;DR
 Optiml is a CPU/GPU LLM inference engine leveraging **activation locality** for your device.
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
+[Project Kanban](https://github.com/orgs/KAIST-KEAI/projects/2/views/2)
+
 ## Latest News 🔥
 - [2023/12/24] We released an online [gradio demo](https://Optiml-gradio.vercel.app/) for Falcon(ReLU)-40B-FP16!
 - [2023/12/19] We officially released Optiml!
@@ -68,6 +72,8 @@ And new features coming soon:
 
 - Mistral-7B model
 - Metal backend for sparse inference on macOS
+
+Please kindly refer to our [Project Kanban](https://github.com/orgs/KAIST-KEAI/projects/2/views/2) for our current focus of development. 
   
 ## Getting Started
 

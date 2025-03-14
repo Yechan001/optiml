@@ -164,13 +164,15 @@ For the same reason, we suggest keeping the same directory structure as Optiml G
 For CPU-only and CPU-GPU hybrid inference with all available VRAM, you can use the following instructions to run Optiml:
 ```bash
 ./build/bin/main -m /PATH/TO/MODEL -n $output_token_count -t $thread_num -p $prompt
-# ./build/bin/main -m ./ReluFalcon-40B-Optiml-GGUF/falcon-40b-relu.q4.Optiml.gguf -n 128 -t 8 -p "Once upon a time"
+# e.g.: ./build/bin/main -m ./ReluFalcon-40B-Optiml-GGUF/falcon-40b-relu.q4.Optiml.gguf -n 128 -t 8 -p "Once upon a time"
+# For Windows: .\build\bin\Release\main.exe -m .\ReluFalcon-40B-Optiml-GGUF\falcon-40b-relu.q4.Optiml.gguf -n 128 -t 8 -p "Once upon a time"
 ```
 
 If you want to limit the VRAM usage of GPU:
 ```bash
 ./build/bin/main -m /PATH/TO/MODEL -n $output_token_count -t $thread_num -p $prompt --vram-budget $vram_gb
-# ./build/bin/main -m ./ReluLLaMA-7B-Optiml-GGUF/llama-7b-relu.Optiml.gguf -n 128 -t 8 -p "Once upon a time" --vram-budget 8
+# e.g.: ./build/bin/main -m ./ReluLLaMA-7B-Optiml-GGUF/llama-7b-relu.Optiml.gguf -n 128 -t 8 -p "Once upon a time" --vram-budget 8
+# For Windows: .\build\bin\Release\main.exe -m .\ReluLLaMA-7B-Optiml-GGUF\llama-7b-relu.Optiml.gguf -n 128 -t 8 -p "Once upon a time" --vram-budget 8
 ```
 Under CPU-GPU hybrid inference, Optiml will automatically offload all dense activation blocks to GPU, then split FFN and offload to GPU if possible. 
 
@@ -179,7 +181,8 @@ Under CPU-GPU hybrid inference, Optiml will automatically offload all dense acti
 Optiml has optimized quantization support for INT4(`Q4_0`) models. You can use the following instructions to quantize Optiml GGUF model:
 ```bash
 ./build/bin/quantize /PATH/TO/MODEL /PATH/TO/OUTPUT/QUANTIZED/MODEL Q4_0
-# ./build/bin/quantize ./ReluFalcon-40B-Optiml-GGUF/falcon-40b-relu.Optiml.gguf ./ReluFalcon-40B-Optiml-GGUF/falcon-40b-relu.q4.Optiml.gguf Q4_0
+# e.g.: ./build/bin/quantize ./ReluFalcon-40B-Optiml-GGUF/falcon-40b-relu.Optiml.gguf ./ReluFalcon-40B-Optiml-GGUF/falcon-40b-relu.q4.Optiml.gguf Q4_0
+# For Windows: .\build\bin\Release\quantize.exe .\ReluFalcon-40B-Optiml-GGUF\falcon-40b-relu.Optiml.gguf .\ReluFalcon-40B-Optiml-GGUF\falcon-40b-relu.q4.Optiml.gguf Q4_0
 ```
 Then you can use the quantized model for inference with Optiml with the same instructions as above.
 

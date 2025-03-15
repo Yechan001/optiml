@@ -128,7 +128,13 @@ You can obtain Optiml GGUF weights at `*.Optiml.gguf` as well as profiled model 
 | Falcon(ReLU)-40B    | [Optiml/ReluFalcon-40B-Optiml-GGUF](https://huggingface.co/Optiml/ReluFalcon-40B-Optiml-GGUF)    |
 | LLaMA(ReLU)-2-70B    | [Optiml/ReluLLaMA-70B-Optiml-GGUF](https://huggingface.co/Optiml/ReluLLaMA-70B-Optiml-GGUF)    |
 
-We suggest downloading/cloning the whole repo so Optiml can automatically make use of such directory structure for feature-complete model offloading:
+We recommend using [`huggingface-cli`](https://huggingface.co/docs/huggingface_hub/guides/cli) to download the whole model repo. For example, the following command will download [Optiml/ReluLLaMA-7B-Optiml-GGUF](https://huggingface.co/Optiml/ReluLLaMA-7B-Optiml-GGUF) into the `./ReluLLaMA-7B` directory.
+
+```shell
+huggingface-cli download --resume-download --local-dir ReluLLaMA-7B --local-dir-use-symlinks False Optiml/ReluLLaMA-7B-Optiml-GGUF
+```
+
+As such, Optiml can automatically make use of the following directory structure for feature-complete model offloading:
 ```
 .
 ├── *.Optiml.gguf (Unquantized Optiml model)

@@ -90,6 +90,7 @@ class MODEL_ARCH(IntEnum):
     GPT2      = auto()
     GPTJ      = auto()
     GPTNEOX   = auto()
+    OPT       = auto()
     MPT       = auto()
     STARCODER = auto()
     PERSIMMON = auto()
@@ -97,6 +98,7 @@ class MODEL_ARCH(IntEnum):
     BERT      = auto()
     BLOOM     = auto()
     STABLELM  = auto()
+    BAMBOO      = auto()
 
 
 class MODEL_TENSOR(IntEnum):
@@ -134,6 +136,7 @@ MODEL_ARCH_NAMES: dict[MODEL_ARCH, str] = {
     MODEL_ARCH.GPT2:           "gpt2",
     MODEL_ARCH.GPTJ:           "gptj",
     MODEL_ARCH.GPTNEOX:        "gptneox",
+    MODEL_ARCH.OPT:            "opt",
     MODEL_ARCH.MPT:            "mpt",
     MODEL_ARCH.STARCODER:      "starcoder",
     MODEL_ARCH.PERSIMMON:      "persimmon",
@@ -141,6 +144,7 @@ MODEL_ARCH_NAMES: dict[MODEL_ARCH, str] = {
     MODEL_ARCH.BERT:           "bert",
     MODEL_ARCH.BLOOM:          "bloom",
     MODEL_ARCH.STABLELM:       "stablelm",
+    MODEL_ARCH.BAMBOO:         "bamboo",
 }
 
 TENSOR_NAMES: dict[MODEL_TENSOR, str] = {
@@ -332,10 +336,42 @@ MODEL_TENSORS: dict[MODEL_ARCH, list[MODEL_TENSOR]] = {
         MODEL_TENSOR.FFN_DOWN,
         MODEL_TENSOR.FFN_UP,
     ],
+    MODEL_ARCH.BAMBOO: [
+        MODEL_TENSOR.TOKEN_EMBD,
+        MODEL_TENSOR.OUTPUT_NORM,
+        MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ROPE_FREQS,
+        MODEL_TENSOR.ATTN_NORM,
+        MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K,
+        MODEL_TENSOR.ATTN_V,
+        MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.ATTN_ROT_EMBD,
+        MODEL_TENSOR.FFN_NORM,
+        MODEL_TENSOR.FFN_GATE,
+        MODEL_TENSOR.FFN_DOWN,
+        MODEL_TENSOR.FFN_UP,
+        MODEL_TENSOR.FFN_DOWN_T,
+        MODEL_TENSOR.FC_1,
+        MODEL_TENSOR.FC_2,
+    ],
     MODEL_ARCH.GPT2: [
         # TODO
     ],
-    # TODO
+    MODEL_ARCH.OPT: [
+        MODEL_TENSOR.TOKEN_EMBD,
+        MODEL_TENSOR.POS_EMBD,
+        MODEL_TENSOR.OUTPUT_NORM,
+        MODEL_TENSOR.OUTPUT,
+        MODEL_TENSOR.ATTN_NORM,
+        MODEL_TENSOR.ATTN_Q,
+        MODEL_TENSOR.ATTN_K,
+        MODEL_TENSOR.ATTN_V,
+        MODEL_TENSOR.ATTN_OUT,
+        MODEL_TENSOR.FFN_NORM,
+        MODEL_TENSOR.FFN_DOWN,
+        MODEL_TENSOR.FFN_UP,
+    ],
 }
 
 # tensors that will not be serialized
@@ -350,6 +386,10 @@ MODEL_TENSOR_SKIP: dict[MODEL_ARCH, list[MODEL_TENSOR]] = {
     ],
     MODEL_ARCH.PERSIMMON: [
         MODEL_TENSOR.ROPE_FREQS,
+    ],
+    MODEL_ARCH.BAMBOO: [
+        MODEL_TENSOR.ROPE_FREQS,
+        MODEL_TENSOR.ATTN_ROT_EMBD,
     ],
 }
 

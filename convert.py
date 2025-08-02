@@ -41,8 +41,6 @@ if hasattr(faulthandler, 'register') and hasattr(signal, 'SIGUSR1'):
 
 NDArray: TypeAlias = 'np.ndarray[Any, Any]'
 
-ARCH = gguf.MODEL_ARCH.LLAMA
-
 DEFAULT_CONCURRENCY = 8
 #
 # data types
@@ -173,6 +171,7 @@ class Params:
     n_head_kv:  int
     f_norm_eps: float
 
+    arch:       gguf.MODEL_ARCH = gguf.MODEL_ARCH.LLAMA
     rope_scaling_type: gguf.RopeScalingType | None = None
     f_rope_freq_base: float | None = None
     f_rope_scale: float | None = None
@@ -249,7 +248,7 @@ class Params:
             raise Exception("failed to guess 'n_ctx'. This model is unknown or unsupported.\n"
                             "Suggestion: provide 'config.json' of the model in the same directory containing model files.")
 
-        return Params(
+        params = Params(
             n_vocab           = config["vocab_size"],
             n_embd            = config["hidden_size"],
             n_layer           = config["num_hidden_layers"],
@@ -264,6 +263,11 @@ class Params:
             n_orig_ctx        = n_orig_ctx,
             rope_finetuned    = rope_finetuned,
         )
+
+        if config.get("model_type", None) == "bamboo":
+            params.arch = gguf.MODEL_ARCH.BAMBOO
+
+        return params
 
     # LLaMA v2 70B params.json
     # {"dim": 8192, "multiple_of": 4096, "ffn_dim_multiplier": 1.3, "n_heads": 64, "n_kv_heads": 8, "n_layers": 80, "norm_eps": 1e-05, "vocab_size": -1}
@@ -831,8 +835,8 @@ def check_vocab_size(params: Params, vocab: Vocab) -> None:
 
 
 class OutputFile:
-    def __init__(self, fname_out: Path, endianess:gguf.GGUFEndian=gguf.GGUFEndian.LITTLE) -> None:
-        self.gguf = gguf.GGUFWriter(fname_out, gguf.MODEL_ARCH_NAMES[ARCH], endianess=endianess)
+    def __init__(self, fname_out: Path, arch: gguf.MODEL_ARCH, endianess:gguf.GGUFEndian=gguf.GGUFEndian.LITTLE) -> None:
+        self.gguf = gguf.GGUFWriter(fname_out, gguf.MODEL_ARCH_NAMES[arch], endianess=endianess)
 
     def add_meta_arch(self, params: Params) -> None:
         name = "LLaMA"
@@ -841,7 +845,7 @@ class OutputFile:
         if params.n_ctx == 4096:
             name = "LLaMA v2"
         elif params.path_model is not None:
-            name = str(params.path_model.parent).split('/')[-1]
+            name = str(params.path_model).split('/')[-1]
 
         self.gguf.add_name                (name)
         self.gguf.add_context_length      (params.n_ctx)
@@ -917,7 +921,7 @@ class OutputFile:
     def write_vocab_only(fname_out: Path, params: Params, vocab: Vocab, svocab: gguf.SpecialVocab, endianess:gguf.GGUFEndian=gguf.GGUFEndian.LITTLE) -> None:
         check_vocab_size(params, vocab)
 
-        of = OutputFile(fname_out, endianess=endianess)
+        of = OutputFile(fname_out, params.arch, endianess=endianess)
 
         # meta data
         of.add_meta_arch(params)
@@ -945,7 +949,7 @@ class OutputFile:
     def write_all(fname_out: Path, ftype: GGMLFileType, params: Params, model: LazyModel, vocab: Vocab, svocab: gguf.SpecialVocab, concurrency: int = DEFAULT_CONCURRENCY, endianess: gguf.GGUFEndian = gguf.GGUFEndian.LITTLE) -> None:
         check_vocab_size(params, vocab)
 
-        of = OutputFile(fname_out, endianess=endianess)
+        of = OutputFile(fname_out, params.arch, endianess=endianess)
 
         # meta data
         of.add_meta_arch(params)
@@ -995,8 +999,8 @@ def convert_to_output_type(model: LazyModel, output_type: GGMLFileType) -> LazyM
             for (name, tensor) in model.items()}
 
 def convert_model_names(model: LazyModel, params: Params) -> LazyModel:
-    tmap = gguf.TensorNameMap(ARCH, params.n_layer)
-    should_skip: set[gguf.MODEL_TENSOR] = set(gguf.MODEL_TENSOR_SKIP.get(ARCH, []))
+    tmap = gguf.TensorNameMap(params.arch, params.n_layer)
+    should_skip: set[gguf.MODEL_TENSOR] = set(gguf.MODEL_TENSOR_SKIP.get(params.arch, []))
 
     tmp = model
 
@@ -1110,8 +1114,8 @@ def load_some_model(path: Path) -> ModelPlus:
     model_plus = merge_multifile_models(models_plus)
     return model_plus
 
-def load_mlp_model(path: Path) -> ModelPlus:
-    '''Load MLP models for sparse attention from directory.'''
+def load_predictor_model(path: Path) -> ModelPlus:
+    '''Load MLP models for sparse FFN inference from directory.'''
     assert path.is_dir(), f"MLP model path {path} is not a directory"
     
     first_model_path = path / "model_0.pt"
@@ -1201,14 +1205,14 @@ def main(args_in: list[str] | None = None) -> None:
     parser.add_argument("--bigendian",   action="store_true",    help="model is executed on big endian machine")
     parser.add_argument("--vocabtype",   choices=["spm", "bpe"], help="vocab format (default: spm)", default="spm")
     parser.add_argument("model",         type=Path,              help="directory containing model file, or model file itself (*.pth, *.pt, *.bin, *.safetensors)")
-    parser.add_argument("mlp_model",     type=Path,              help="MLP model for sparse attention")
+    parser.add_argument("sparse_predictor",     type=Path,              help="predictors for sparse FFN inference")
 
     args = parser.parse_args(args_in)
 
     try:
         with open(args.model / "config.json", "r", encoding="utf-8") as f:
             hf_config = json.load(f)
-        if model_type := hf_config.get("model_type") != "llama":
+        if model_type := hf_config.get("model_type") not in ("llama", "bamboo"):
             # invoke another script to convert other models
             print(f"Model architecture {model_type} is not supported by this `convert.py`. Trying with `convert-hf-to-Optiml-gguf.py`...")
             script_path = Path(__file__).resolve().parent / "convert-hf-to-Optiml-gguf.py"
@@ -1226,7 +1230,7 @@ def main(args_in: list[str] | None = None) -> None:
     if not args.vocab_only:
         model_plus = load_some_model(args.model)
         params = Params.load(model_plus)
-        mlp_predictor_plus = load_mlp_model(args.mlp_model)
+        mlp_predictor_plus = load_predictor_model(args.sparse_predictor)
         params.predictor_params = PredictorParams.load(mlp_predictor_plus)
         model_plus = merge_multifile_models([model_plus, mlp_predictor_plus])
     else:

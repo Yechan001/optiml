@@ -8,6 +8,7 @@ Optiml is a CPU/GPU LLM inference engine leveraging **activation locality** for 
 [Project Kanban](https://github.com/orgs/KAIST-KEAI/projects/2/views/2)
 
 ## Latest News 🔥
+- [2024/3/14] We supported ProSparse Llama 2 ([7B](https://huggingface.co/SparseLLM/prosparse-llama-2-7b)/[13B](https://huggingface.co/SparseLLM/prosparse-llama-2-13b)), ReLU models with ~90% sparsity, matching original Llama 2's performance (Thanks THUNLP & ModelBest)!
 - [2024/1/11] We supported Windows with GPU inference!
 - [2023/12/24] We released an online [gradio demo](https://Optiml-gradio.vercel.app/) for Falcon(ReLU)-40B-FP16!
 - [2023/12/19] We officially released Optiml!
@@ -23,19 +24,19 @@ Optiml v.s. llama.cpp on a single RTX 4090(24G) running Falcon(ReLU)-40B-FP16 wi
 > **Live Demo Online⚡️**
 >
 > Try out our [Gradio server](https://Optiml-gradio.vercel.app/) hosting Falcon(ReLU)-40B-FP16 on a RTX 4090!
-> 
+>
 > <sub>Experimental and without warranties 🚧</sub>
 
 ## Abstract
 
-We introduce Optiml, a high-speed Large Language Model (LLM) inference engine on a personal computer (PC) 
-equipped with a single consumer-grade GPU. The key underlying the design of Optiml is exploiting the high **locality** 
-inherent in LLM inference, characterized by a power-law distribution in neuron activation. 
+We introduce Optiml, a high-speed Large Language Model (LLM) inference engine on a personal computer (PC)
+equipped with a single consumer-grade GPU. The key underlying the design of Optiml is exploiting the high **locality**
+inherent in LLM inference, characterized by a power-law distribution in neuron activation.
 
-This distribution indicates that a small subset of neurons, termed hot neurons, are consistently activated 
+This distribution indicates that a small subset of neurons, termed hot neurons, are consistently activated
 across inputs, while the majority, cold neurons, vary based on specific inputs.
 Optiml exploits such an insight to design a GPU-CPU hybrid inference engine:
-hot-activated neurons are preloaded onto the GPU for fast access, while cold-activated neurons are computed 
+hot-activated neurons are preloaded onto the GPU for fast access, while cold-activated neurons are computed
 on the CPU, thus significantly reducing GPU memory demands and CPU-GPU data transfers.
 Optiml further integrates adaptive predictors and neuron-aware sparse operators,
 optimizing the efficiency of neuron activation and computational sparsity.
@@ -45,7 +46,7 @@ only 18\% lower than that achieved by a top-tier server-grade A100 GPU.
 This significantly outperforms llama.cpp by up to 11.69x while retaining model accuracy.
 
 ## Features
-Optiml is a high-speed and easy-to-use inference engine for deploying LLMs locally. 
+Optiml is a high-speed and easy-to-use inference engine for deploying LLMs locally.
 
 Optiml is fast with:
 
@@ -74,8 +75,8 @@ And new features coming soon:
 - Mistral-7B model
 - Metal backend for sparse inference on macOS
 
-Please kindly refer to our [Project Kanban](https://github.com/orgs/KAIST-KEAI/projects/2/views/2) for our current focus of development. 
-  
+Please kindly refer to our [Project Kanban](https://github.com/orgs/KAIST-KEAI/projects/2/views/2) for our current focus of development.
+
 ## Getting Started
 
 - [Installation](#setup-and-installation)
@@ -115,18 +116,20 @@ cmake --build build --config Release
 
 ## Model Weights
 
-Optiml models are stored in a special format called *Optiml GGUF* based on GGUF format, consisting of both LLM weights and predictor weights. 
+Optiml models are stored in a special format called *Optiml GGUF* based on GGUF format, consisting of both LLM weights and predictor weights.
 
 ### Download Optiml GGUF via Hugging Face
 
 You can obtain Optiml GGUF weights at `*.Optiml.gguf` as well as profiled model activation statistics for 'hot'-neuron offloading from each Hugging Face repo below.
 
-| Base Model | Optiml GGUF |
-|------------|------------------|
-| LLaMA(ReLU)-2-7B   | [Optiml/ReluLLaMA-7B-Optiml-GGUF](https://huggingface.co/Optiml/ReluLLaMA-7B-Optiml-GGUF)    |
-| LLaMA(ReLU)-2-13B    | [Optiml/ReluLLaMA-13B-Optiml-GGUF](https://huggingface.co/Optiml/ReluLLaMA-13B-Optiml-GGUF)   |
-| Falcon(ReLU)-40B    | [Optiml/ReluFalcon-40B-Optiml-GGUF](https://huggingface.co/Optiml/ReluFalcon-40B-Optiml-GGUF)    |
-| LLaMA(ReLU)-2-70B    | [Optiml/ReluLLaMA-70B-Optiml-GGUF](https://huggingface.co/Optiml/ReluLLaMA-70B-Optiml-GGUF)    |
+| Base Model            | Optiml GGUF                                                                                               |
+|-----------------------|---------------------------------------------------------------------------------------------------------------|
+| LLaMA(ReLU)-2-7B      | [Optiml/ReluLLaMA-7B-Optiml-GGUF](https://huggingface.co/Optiml/ReluLLaMA-7B-Optiml-GGUF)     |
+| LLaMA(ReLU)-2-13B     | [Optiml/ReluLLaMA-13B-Optiml-GGUF](https://huggingface.co/Optiml/ReluLLaMA-13B-Optiml-GGUF)   |
+| Falcon(ReLU)-40B      | [Optiml/ReluFalcon-40B-Optiml-GGUF](https://huggingface.co/Optiml/ReluFalcon-40B-Optiml-GGUF) |
+| LLaMA(ReLU)-2-70B     | [Optiml/ReluLLaMA-70B-Optiml-GGUF](https://huggingface.co/Optiml/ReluLLaMA-70B-Optiml-GGUF)   |
+| ProSparse-LLaMA-2-7B  | [Optiml/ProSparse-LLaMA-2-7B-GGUF](https://huggingface.co/Optiml/prosparse-llama-2-7b-gguf)           |
+| ProSparse-LLaMA-2-13B | [Optiml/ProSparse-LLaMA-2-13B-GGUF](https://huggingface.co/Optiml/prosparse-llama-2-13b-gguf)         |
 
 We recommend using [`huggingface-cli`](https://huggingface.co/docs/huggingface_hub/guides/cli) to download the whole model repo. For example, the following command will download [Optiml/ReluLLaMA-7B-Optiml-GGUF](https://huggingface.co/Optiml/ReluLLaMA-7B-Optiml-GGUF) into the `./ReluLLaMA-7B` directory.
 
@@ -149,12 +152,14 @@ As such, Optiml can automatically make use of the following directory structure 
 
 Hugging Face limits single model weight to 50GiB. For unquantized models >= 40B, you can convert Optiml GGUF from the original model weights and predictor weights obtained from Hugging Face.
 
-| Base Model | Original Model | Predictor |
-|------------|----------------|---------------------|
-| LLaMA(ReLU)-2-7B   | [SparseLLM/ReluLLaMA-7B](https://huggingface.co/SparseLLM/ReluLLaMA-7B)     |  [Optiml/ReluLLaMA-7B-Predictor](https://huggingface.co/Optiml/ReluLLaMA-7B-Predictor)
-| LLaMA(ReLU)-2-13B    | [SparseLLM/ReluLLaMA-13B](https://huggingface.co/SparseLLM/ReluLLaMA-13B)  |  [Optiml/ReluLLaMA-13B-Predictor](https://huggingface.co/Optiml/ReluLLaMA-13B-Predictor)
-| Falcon(ReLU)-40B    | [SparseLLM/ReluFalcon-40B](https://huggingface.co/SparseLLM/ReluFalcon-40B)      | [Optiml/ReluFalcon-40B-Predictor](https://huggingface.co/Optiml/ReluFalcon-40B-Predictor)
-| LLaMA(ReLU)-2-70B    | [SparseLLM/ReluLLaMA-70B](https://huggingface.co/SparseLLM/ReluLLaMA-70B)      |  [Optiml/ReluLLaMA-70B-Predictor](https://huggingface.co/Optiml/ReluLLaMA-70B-Predictor)
+| Base Model            | Original Model                                                                            | Predictor |
+|-----------------------|-------------------------------------------------------------------------------------------|---------------------|
+| LLaMA(ReLU)-2-7B      | [SparseLLM/ReluLLaMA-7B](https://huggingface.co/SparseLLM/ReluLLaMA-7B)                   |  [Optiml/ReluLLaMA-7B-Predictor](https://huggingface.co/Optiml/ReluLLaMA-7B-Predictor)
+| LLaMA(ReLU)-2-13B     | [SparseLLM/ReluLLaMA-13B](https://huggingface.co/SparseLLM/ReluLLaMA-13B)                 |  [Optiml/ReluLLaMA-13B-Predictor](https://huggingface.co/Optiml/ReluLLaMA-13B-Predictor)
+| Falcon(ReLU)-40B      | [SparseLLM/ReluFalcon-40B](https://huggingface.co/SparseLLM/ReluFalcon-40B)               | [Optiml/ReluFalcon-40B-Predictor](https://huggingface.co/Optiml/ReluFalcon-40B-Predictor)
+| LLaMA(ReLU)-2-70B     | [SparseLLM/ReluLLaMA-70B](https://huggingface.co/SparseLLM/ReluLLaMA-70B)                 |  [Optiml/ReluLLaMA-70B-Predictor](https://huggingface.co/Optiml/ReluLLaMA-70B-Predictor)
+| ProSparse-LLaMA-2-7B  | [SparseLLM/ProSparse-LLaMA-2-7B](https://huggingface.co/SparseLLM/prosparse-llama-2-7b)   |  [Optiml/ProSparse-LLaMA-2-7B-Predictor](https://huggingface.co/Optiml/prosparse-llama-2-7b-predictor)
+| ProSparse-LLaMA-2-13B | [SparseLLM/ProSparse-LLaMA-2-13B](https://huggingface.co/SparseLLM/prosparse-llama-2-13b) |  [Optiml/ProSparse-LLaMA-2-13B-Predictor](https://huggingface.co/Optiml/prosparse-llama-2-13b-predictor)
 
 You can use the following command to convert the original model weights and predictor weights to Optiml GGUF:
 ```bash
@@ -180,7 +185,7 @@ If you want to limit the VRAM usage of GPU:
 # e.g.: ./build/bin/main -m ./ReluLLaMA-7B-Optiml-GGUF/llama-7b-relu.Optiml.gguf -n 128 -t 8 -p "Once upon a time" --vram-budget 8
 # For Windows: .\build\bin\Release\main.exe -m .\ReluLLaMA-7B-Optiml-GGUF\llama-7b-relu.Optiml.gguf -n 128 -t 8 -p "Once upon a time" --vram-budget 8
 ```
-Under CPU-GPU hybrid inference, Optiml will automatically offload all dense activation blocks to GPU, then split FFN and offload to GPU if possible. 
+Under CPU-GPU hybrid inference, Optiml will automatically offload all dense activation blocks to GPU, then split FFN and offload to GPU if possible.
 
 ## Quantization
 
@@ -232,7 +237,7 @@ We will release the code and data in the following order, please stay tuned!
 - [ ] Release perplexity evaluation code
 - [ ] Support Metal for Mac
 - [ ] Release code for OPT models
-- [ ] Release predictor training code 
+- [ ] Release predictor training code
 - [x] Support online split for FFN network
 - [ ] Support Multi-GPU
 
@@ -244,7 +249,7 @@ If you find Optiml useful or relevant to your project and research, please kindl
 
 ```bibtex
 @misc{song2023Optiml,
-      title={Optiml: Fast Large Language Model Serving with a Consumer-grade GPU}, 
+      title={Optiml: Fast Large Language Model Serving with a Consumer-grade GPU},
       author={Yechan Hwang},
       year={2023},
       eprint={2312.12456},

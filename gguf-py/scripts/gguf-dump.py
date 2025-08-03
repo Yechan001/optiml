@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""
+GGUF File Dump Tool.
+
+This script provides detailed inspection of GGUF model files,
+including metadata visualization and tensor information.
+"""
 from __future__ import annotations
 
 import argparse
@@ -28,6 +34,13 @@ def get_file_host_endian(reader: GGUFReader) -> tuple[str, str]:
 # For more information about what field.parts and field.data represent,
 # please see the comments in the modify_gguf.py example.
 def dump_metadata(reader: GGUFReader, args: argparse.Namespace) -> None:
+    """
+    Dump GGUF file metadata in human-readable format.
+    
+    Args:
+        reader: Initialized GGUFReader instance
+        args: Command line arguments dictating output format
+    """
     host_endian, file_endian = get_file_host_endian(reader)
     print(f'* File is {file_endian} endian, script is running on a {host_endian} endian host.')
     print(f'\n* Dumping {len(reader.fields)} key/value pair(s)')

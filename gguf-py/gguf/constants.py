@@ -1,8 +1,19 @@
+"""GGUF (GPT-Generated Unified Format) constants and enumerations.
+
+This module defines the core data types and metadata keys used in GGUF files,
+including model architectures, tensor types, and quantization formats.
+"""
+
 from __future__ import annotations
 
 import sys
 from enum import Enum, IntEnum, auto
 from typing import Any
+
+# Core GGUF constants
+GGUF_MAGIC             = 0x46554747  # "GGUF" in little-endian
+GGUF_VERSION           = 3           # Current GGUF format version
+GGUF_DEFAULT_ALIGNMENT = 32          # Default memory alignment
 
 #
 # constants
@@ -84,48 +95,50 @@ class Keys:
 
 
 class MODEL_ARCH(IntEnum):
-    LLAMA     = auto()
-    FALCON    = auto()
-    BAICHUAN  = auto()
-    GPT2      = auto()
-    GPTJ      = auto()
-    GPTNEOX   = auto()
-    OPT       = auto()
-    MPT       = auto()
-    STARCODER = auto()
-    PERSIMMON = auto()
-    REFACT    = auto()
-    BERT      = auto()
-    BLOOM     = auto()
-    STABLELM  = auto()
-    BAMBOO      = auto()
+    """Supported model architectures in GGUF format."""
+    LLAMA     = auto()    # LLaMA architecture (Meta)
+    FALCON    = auto()    # Falcon architecture (TII)
+    BAICHUAN  = auto()    # Baichuan architecture (Baichuan Intelligence)
+    GPT2      = auto()    # GPT-2 architecture (OpenAI)
+    GPTJ      = auto()    # GPT-J architecture (EleutherAI)
+    GPTNEOX   = auto()    # GPT-NeoX architecture (EleutherAI)
+    OPT       = auto()    # OPT architecture (Meta)
+    MPT       = auto()    # MPT architecture (MosaicML)
+    STARCODER = auto()    # StarCoder architecture (BigCode)
+    PERSIMMON = auto()    # Persimmon architecture (ADEPT)
+    REFACT    = auto()    # Refact architecture (SmallCloud)
+    BERT      = auto()    # BERT architecture (Google)
+    BLOOM     = auto()    # BLOOM architecture (BigScience)
+    STABLELM  = auto()    # StableLM architecture (Stability AI)
+    BAMBOO    = auto()    # Bamboo architecture (BambooAI)
 
 
 class MODEL_TENSOR(IntEnum):
-    TOKEN_EMBD      = auto()
-    TOKEN_EMBD_NORM = auto()
-    TOKEN_TYPES     = auto()
-    POS_EMBD        = auto()
-    OUTPUT          = auto()
-    OUTPUT_NORM     = auto()
-    ROPE_FREQS      = auto()
-    ATTN_Q          = auto()
-    ATTN_K          = auto()
-    ATTN_V          = auto()
-    ATTN_QKV        = auto()
-    ATTN_OUT        = auto()
-    ATTN_NORM       = auto()
-    ATTN_NORM_2     = auto()
-    ATTN_ROT_EMBD   = auto()
-    FFN_GATE        = auto()
-    FFN_DOWN        = auto()
-    FFN_UP          = auto()
-    FFN_NORM        = auto()
-    ATTN_Q_NORM     = auto()
-    ATTN_K_NORM     = auto()
-    FFN_DOWN_T      = auto()
-    FC_1            = auto()
-    FC_2            = auto()
+    """Model tensor types used in GGUF files."""
+    TOKEN_EMBD      = auto()  # Token embeddings
+    TOKEN_EMBD_NORM = auto()  # Token embeddings normalization
+    TOKEN_TYPES     = auto()  # Token type embeddings
+    POS_EMBD        = auto()  # Position embeddings
+    OUTPUT          = auto()  # Output layer
+    OUTPUT_NORM     = auto()  # Output normalization
+    ROPE_FREQS      = auto()  # RoPE frequencies
+    ATTN_Q          = auto()  # Attention query weights
+    ATTN_K          = auto()  # Attention key weights
+    ATTN_V          = auto()  # Attention value weights
+    ATTN_QKV        = auto()  # Combined QKV attention weights
+    ATTN_OUT        = auto()  # Attention output weights
+    ATTN_NORM       = auto()  # Attention normalization
+    ATTN_NORM_2     = auto()  # Secondary attention normalization
+    ATTN_ROT_EMBD   = auto()  # Attention rotary embeddings
+    FFN_GATE        = auto()  # Feed-forward gate weights
+    FFN_DOWN        = auto()  # Feed-forward down projection
+    FFN_UP          = auto()  # Feed-forward up projection
+    FFN_NORM        = auto()  # Feed-forward normalization
+    ATTN_Q_NORM     = auto()  # Attention query normalization
+    ATTN_K_NORM     = auto()  # Attention key normalization
+    FFN_DOWN_T      = auto()  # Feed-forward down projection (transposed)
+    FC_1            = auto()  # Fully connected layer 1
+    FC_2            = auto()  # Fully connected layer 2
 
 
 
@@ -399,38 +412,41 @@ MODEL_TENSOR_SKIP: dict[MODEL_ARCH, list[MODEL_TENSOR]] = {
 
 
 class TokenType(IntEnum):
-    NORMAL       = 1
-    UNKNOWN      = 2
-    CONTROL      = 3
-    USER_DEFINED = 4
-    UNUSED       = 5
-    BYTE         = 6
+    """Tokenizer token types."""
+    NORMAL       = 1  # Regular text token
+    UNKNOWN      = 2  # Unknown/undefined token
+    CONTROL      = 3  # Control/special token
+    USER_DEFINED = 4  # User-defined token
+    UNUSED       = 5  # Reserved/unused token type
+    BYTE         = 6  # Byte-level token
 
 
 class RopeScalingType(Enum):
-    NONE   = 'none'
-    LINEAR = 'linear'
-    YARN   = 'yarn'
+    """RoPE (Rotary Position Embedding) scaling types."""
+    NONE   = 'none'    # No scaling
+    LINEAR = 'linear'  # Linear scaling
+    YARN   = 'yarn'    # YaRN scaling method
 
 
 class GGMLQuantizationType(IntEnum):
-    F32  = 0
-    F16  = 1
-    Q4_0 = 2
-    Q4_1 = 3
-    Q5_0 = 6
-    Q5_1 = 7
-    Q8_0 = 8
-    Q8_1 = 9
-    Q2_K = 10
-    Q3_K = 11
-    Q4_K = 12
-    Q5_K = 13
-    Q6_K = 14
-    Q8_K = 15
-    I8 = 16,
-    I16 = 17
-    I32 = 18,
+    """GGML tensor quantization types."""
+    F32  = 0   # 32-bit floating point
+    F16  = 1   # 16-bit floating point
+    Q4_0 = 2   # 4-bit integer quantization
+    Q4_1 = 3   # 4-bit integer quantization (with scale)
+    Q5_0 = 6   # 5-bit integer quantization
+    Q5_1 = 7   # 5-bit integer quantization (with scale)
+    Q8_0 = 8   # 8-bit integer quantization
+    Q8_1 = 9   # 8-bit integer quantization (with scale)
+    Q2_K = 10  # 2-bit k-quantization
+    Q3_K = 11  # 3-bit k-quantization
+    Q4_K = 12  # 4-bit k-quantization
+    Q5_K = 13  # 5-bit k-quantization
+    Q6_K = 14  # 6-bit k-quantization
+    Q8_K = 15  # 8-bit k-quantization
+    I8 = 16,   # 8-bit integer
+    I16 = 17   # 16-bit integer
+    I32 = 18,  # 32-bit integer
 
 
 class GGUFEndian(IntEnum):
@@ -439,22 +455,34 @@ class GGUFEndian(IntEnum):
 
 
 class GGUFValueType(IntEnum):
-    UINT8   = 0
-    INT8    = 1
-    UINT16  = 2
-    INT16   = 3
-    UINT32  = 4
-    INT32   = 5
-    FLOAT32 = 6
-    BOOL    = 7
-    STRING  = 8
-    ARRAY   = 9
-    UINT64  = 10
-    INT64   = 11
-    FLOAT64 = 12
+    """GGUF metadata value types used for key-value pairs."""
+    UINT8   = 0   # 8-bit unsigned integer
+    INT8    = 1   # 8-bit signed integer
+    UINT16  = 2   # 16-bit unsigned integer
+    INT16   = 3   # 16-bit signed integer
+    UINT32  = 4   # 32-bit unsigned integer
+    INT32   = 5   # 32-bit signed integer
+    FLOAT32 = 6   # 32-bit floating point
+    BOOL    = 7   # Boolean value (0=false, 1=true)
+    STRING  = 8   # UTF-8 null-terminated string
+    ARRAY   = 9   # Homogeneous array (elements share type)
+    UINT64  = 10  # 64-bit unsigned integer
+    INT64   = 11  # 64-bit signed integer
+    FLOAT64 = 12  # 64-bit floating point
 
     @staticmethod
     def get_type(val: Any) -> GGUFValueType:
+        """Determine the appropriate GGUFValueType for a given Python value.
+        
+        Args:
+            val: Input value to classify
+            
+        Returns:
+            GGUFValueType: The corresponding GGUF value type
+            
+        Raises:
+            SystemExit: If the value type is not recognized
+        """
         if isinstance(val, (str, bytes, bytearray)):
             return GGUFValueType.STRING
         elif isinstance(val, list):
@@ -471,24 +499,28 @@ class GGUFValueType(IntEnum):
             sys.exit()
 
 
-# Note: Does not support GGML_QKK_64
+# Quantization block size for K-quant methods
 QK_K = 256
-# Items here are (block size, type size)
+
+# GGML quantization type sizes dictionary
+# Format: {GGMLQuantizationType: (block_size, type_size)}
+# block_size - number of elements per quant block
+# type_size - size in bytes of the quantized type
 GGML_QUANT_SIZES = {
-    GGMLQuantizationType.F32:  (1, 4),
-    GGMLQuantizationType.F16:  (1, 2),
-    GGMLQuantizationType.Q4_0: (32, 2 + 16),
-    GGMLQuantizationType.Q4_1: (32, 2 + 2 + 16),
-    GGMLQuantizationType.Q5_0: (32, 2 + 4 + 16),
-    GGMLQuantizationType.Q5_1: (32, 2 + 2 + 4 + 16),
-    GGMLQuantizationType.Q8_0: (32, 2 + 32),
-    GGMLQuantizationType.Q8_1: (32, 4 + 4 + 32),
-    GGMLQuantizationType.Q2_K: (256, 2 + 2 + QK_K // 16 + QK_K // 4),
-    GGMLQuantizationType.Q3_K: (256, 2 + QK_K // 4 + QK_K // 8 + 12),
-    GGMLQuantizationType.Q4_K: (256, 2 + 2 + QK_K // 2 + 12),
-    GGMLQuantizationType.Q5_K: (256, 2 + 2 + QK_K // 2 + QK_K // 8 + 12),
-    GGMLQuantizationType.Q6_K: (256, 2 + QK_K // 2 + QK_K // 4 + QK_K // 16),
-    GGMLQuantizationType.Q8_K: (256, 4 + QK_K + QK_K // 8),
+    GGMLQuantizationType.F32:  (1, 4),       # 32-bit float (no quantization)
+    GGMLQuantizationType.F16:  (1, 2),       # 16-bit float (no quantization)
+    GGMLQuantizationType.Q4_0: (32, 2 + 16), # 4-bit quantization (type 0)
+    GGMLQuantizationType.Q4_1: (32, 2 + 2 + 16), # 4-bit quantization (type 1)
+    GGMLQuantizationType.Q5_0: (32, 2 + 4 + 16), # 5-bit quantization (type 0)
+    GGMLQuantizationType.Q5_1: (32, 2 + 2 + 4 + 16), # 5-bit quantization (type 1)
+    GGMLQuantizationType.Q8_0: (32, 2 + 32), # 8-bit quantization (type 0)
+    GGMLQuantizationType.Q8_1: (32, 4 + 4 + 32), # 8-bit quantization (type 1)
+    GGMLQuantizationType.Q2_K: (256, 2 + 2 + QK_K // 16 + QK_K // 4), # 2-bit k-quant
+    GGMLQuantizationType.Q3_K: (256, 2 + QK_K // 4 + QK_K // 8 + 12),   # 3-bit k-quant
+    GGMLQuantizationType.Q4_K: (256, 2 + 2 + QK_K // 2 + 12),         # 4-bit k-quant
+    GGMLQuantizationType.Q5_K: (256, 2 + 2 + QK_K // 2 + QK_K // 8 + 12), # 5-bit k-quant
+    GGMLQuantizationType.Q6_K: (256, 2 + QK_K // 2 + QK_K // 4 + QK_K // 16), # 6-bit k-quant
+    GGMLQuantizationType.Q8_K: (256, 4 + QK_K + QK_K // 8),           # 8-bit k-quant
 }
 
 

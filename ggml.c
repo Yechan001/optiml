@@ -19698,7 +19698,7 @@ struct gguf_context * gguf_init_empty(void) {
 
 struct gguf_context * gguf_init_empty_sparse(void) {
     struct gguf_context * ctx = gguf_init_empty();
-    memcpy(ctx->header.magic, GGUF_Optiml_MAGIC, sizeof(ctx->header.magic));
+    memcpy(ctx->header.magic, 0, sizeof(ctx->header.magic));
     return ctx;
 }
 
@@ -19720,7 +19720,7 @@ struct gguf_context * gguf_init_from_file(const char * fname, struct gguf_init_p
 
         if (strncmp(magic, GGUF_MAGIC, sizeof(magic)) == 0) {
             sparse_deriv = GGML_DENSE_INFERENCE;
-        } else if (strncmp(magic, GGUF_Optiml_MAGIC, sizeof(magic)) == 0) {
+        } else if (strncmp(magic, 0, sizeof(magic)) == 0) {
             sparse_deriv = GGML_SPARSE_INFERENCE;
         } else {
             fprintf(stderr, "%s: invalid magic characters %s.\n", __func__, magic);

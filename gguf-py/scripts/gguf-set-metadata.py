@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""
+GGUF Metadata Modification Tool.
+
+This script allows modifying metadata fields in existing GGUF model files,
+including adding, updating and removing key-value pairs.
+"""
 import argparse
 import os
 import sys

@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""
+GGUF Endianness Conversion Tool.
+
+This script converts GGUF files between little-endian and big-endian formats.
+Handles both metadata and tensor data conversion.
+"""
 from __future__ import annotations
 
 import argparse

@@ -1,4 +1,15 @@
+/**
+ * @file log.h
+ * @brief Advanced logging utilities for the project
+ * 
+ * Provides configurable logging with multiple targets,
+ * timestamps, and thread-safe operations.
+ */
+
 #pragma once
+
+#ifndef OPTIML_LOG_H
+#define OPTIML_LOG_H
 
 #include <chrono>
 #include <cstring>
@@ -9,43 +20,18 @@
 #include <algorithm>
 #include <cinttypes>
 
-// --------------------------------
-//
-// Basic usage:
-//
-// --------
-//
-//  The LOG() and LOG_TEE() macros are ready to go by default
-//   they do not require any initialization.
-//
-//  LOGLN() and LOG_TEELN() are variants which automatically
-//   include \n character at the end of the log string.
-//
-//  LOG() behaves exactly like printf, by default writing to a logfile.
-//  LOG_TEE() additionally, prints to the screen too ( mimics Unix tee command ).
-//
-//  Default logfile is named
-//   "llama.<threadID>.log"
-//  Default LOG_TEE() secondary output target is
-//   stderr
-//
-//  Logs can be dynamically disabled or enabled using functions:
-//   log_disable()
-//  and
-//   log_enable()
-//
-//  A log target can be changed with:
-//   log_set_target( string )
-//    creating and opening, or re-opening a file by string filename
-//  or
-//   log_set_target( FILE* )
-//    allowing to point at stderr, stdout, or any valid FILE* file handler.
-//
-// --------
-//
-// End of Basic usage.
-//
-// --------------------------------
+/**
+ * @name Basic Usage
+ * @{
+ *
+ * - LOG() and LOG_TEE() macros are ready by default
+ * - LOGLN() and LOG_TEELN() variants auto-add newline
+ * - LOG() writes to logfile (default: "llama.<threadID>.log")
+ * - LOG_TEE() writes to logfile and stderr
+ * - Enable/disable with log_enable()/log_disable()
+ * - Change target with log_set_target()
+ * @}
+ */
 
 // Specifies a log target.
 //  default uses log_handler() with "llama.log" log file
@@ -419,9 +405,12 @@ inline FILE *log_handler2_impl(bool change = false, LogTriState append = LogTriS
     return log_handler1_impl(change, append, disable, filename, target);
 }
 
-// Disables logs entirely at runtime.
-//  Makes LOG() and LOG_TEE() produce no output,
-//  untill enabled back.
+/**
+ * @brief Disable all logging output
+ * 
+ * Stops all LOG and LOG_TEE output until re-enabled.
+ * Has no effect if logging is already disabled.
+ */
 #define log_disable() log_disable_impl()
 
 // INTERNAL, DO NOT USE
@@ -430,7 +419,12 @@ inline FILE *log_disable_impl()
     return log_handler1_impl(true, LogTriStateSame, LogTriStateTrue);
 }
 
-// Enables logs at runtime.
+/**
+ * @brief Enable logging output
+ * 
+ * Restores logging output if previously disabled.
+ * Has no effect if logging is already enabled.
+ */
 #define log_enable() log_enable_impl()
 
 // INTERNAL, DO NOT USE
@@ -439,7 +433,13 @@ inline FILE *log_enable_impl()
     return log_handler1_impl(true, LogTriStateSame, LogTriStateFalse);
 }
 
-// Sets target fir logs, either by a file name or FILE* pointer (stdout, stderr, or any valid FILE*)
+/**
+ * @brief Set logging output target
+ * 
+ * @param target Can be:
+ *   - File path string (creates/opens file)
+ *   - FILE* pointer (stdout, stderr, etc.)
+ */
 #define log_set_target(target) log_set_target_impl(target)
 
 // INTERNAL, DO NOT USE
@@ -449,11 +449,19 @@ inline FILE *log_set_target_impl(FILE *target) { return log_handler2_impl(true, 
 // INTERNAL, DO NOT USE
 inline FILE *log_handler() { return log_handler1_impl(); }
 
-// Enable or disable creating separate log files for each run.
-//  can ONLY be invoked BEFORE first log use.
+/**
+ * @brief Enable/disable unique log files per process
+ * 
+ * @param enable true to generate unique log filenames
+ * @note Must be called before any log operations
+ */
 #define log_multilog(enable) log_filename_generator_impl((enable) ? LogTriStateTrue : LogTriStateFalse, "", "")
-// Enable or disable append mode for log file.
-//  can ONLY be invoked BEFORE first log use.
+/**
+ * @brief Enable/disable log file append mode
+ * 
+ * @param enable true to append, false to overwrite
+ * @note Must be called before any log operations
+ */
 #define log_append(enable) log_append_impl(enable)
 // INTERNAL, DO NOT USE
 inline FILE *log_append_impl(bool enable)
@@ -461,6 +469,12 @@ inline FILE *log_append_impl(bool enable)
     return log_handler1_impl(true, enable ? LogTriStateTrue : LogTriStateFalse, LogTriStateSame);
 }
 
+/**
+ * @brief Run logging system self-test
+ * 
+ * Tests all logging functionality and outputs
+ * test messages to verify logging is working.
+ */
 inline void log_test()
 {
     log_disable();
@@ -502,6 +516,12 @@ inline void log_test()
 #endif
 }
 
+/**
+ * @brief Parse single logging-related command line parameter
+ * 
+ * @param param Parameter to parse
+ * @return true if parameter was recognized and processed
+ */
 inline bool log_param_single_parse(const std::string & param)
 {
     if ( param == "--log-test")
@@ -537,6 +557,14 @@ inline bool log_param_single_parse(const std::string & param)
     return false;
 }
 
+/**
+ * @brief Parse logging-related command line parameter pair
+ * 
+ * @param check_but_dont_parse Only validate parameter without applying changes
+ * @param param Parameter name
+ * @param next Parameter value (optional)
+ * @return true if parameter was recognized
+ */
 inline bool log_param_pair_parse(bool check_but_dont_parse, const std::string & param, const std::string & next = std::string())
 {
     if ( param == "--log-file")
@@ -552,6 +580,9 @@ inline bool log_param_pair_parse(bool check_but_dont_parse, const std::string & 
     return false;
 }
 
+/**
+ * @brief Print logging system command line usage
+ */
 inline void log_print_usage()
 {
     printf("log options:\n");

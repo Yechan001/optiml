@@ -1,3 +1,11 @@
+/**
+ * @file server.cpp
+ * @brief LLaMA HTTP server implementation
+ *
+ * Provides a web interface for interacting with LLaMA models
+ * including chat completions and embeddings.
+ */
+
 #include "common.h"
 #include "llama.h"
 #include "grammar-parser.h"

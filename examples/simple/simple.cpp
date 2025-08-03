@@ -1,3 +1,11 @@
+/**
+ * @file simple.cpp
+ * @brief Minimal LLaMA inference example
+ * 
+ * Demonstrates basic model loading and text generation
+ * using the simplest possible implementation.
+ */
+
 #include "common.h"
 #include "llama.h"
 
@@ -7,6 +15,13 @@
 #include <vector>
 
 int main(int argc, char ** argv) {
+    /**
+     * Main inference function
+     * 
+     * @param argc Command line argument count
+     * @param argv Command line arguments (expects model path)
+     * @return Exit status (0 on success)
+     */
     gpt_params params;
 
     if (argc == 1 || argv[1][0] == '-') {

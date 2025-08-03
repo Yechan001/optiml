@@ -1,3 +1,18 @@
+/**
+ * @file quantize.cpp
+ * @brief Model quantization example
+ *
+ * Demonstrates quantizing LLaMA models to reduced precision formats
+ */
+
+/**
+ * @file quantize.cpp
+ * @brief Model quantization example
+ *
+ * Demonstrates how to quantize LLaMA models to reduce
+ * memory usage and improve inference speed.
+ */
+
 #include "common.h"
 #include "llama.h"
 
@@ -87,7 +102,21 @@ static void usage(const char * executable) {
     exit(1);
 }
 
+/**
+ * @brief Main function for model quantization
+ *
+ * @param argc Argument count
+ * @param argv Argument vector
+ * @return int Exit code (0 on success)
+ */
 int main(int argc, char ** argv) {
+    /**
+     * Main quantization function
+     * 
+     * @param argc Command line argument count
+     * @param argv Command line arguments (input/output paths and quantization type)
+     * @return Exit status (0 on success)
+     */
     if (argc < 3) {
         usage(argv[0]);
     }

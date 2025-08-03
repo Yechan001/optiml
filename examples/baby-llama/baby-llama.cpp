@@ -18,6 +18,33 @@ constexpr float rms_norm_eps = LLAMA_DEFAULT_RMS_EPS;
 constexpr float rms_norm_eps = 5e-6f;
 #endif
 
+// 张量形状验证辅助函数
+static void assert_shape_1d(const struct ggml_tensor * tensor, int64_t ne0) {
+    GGML_ASSERT(tensor->n_dims == 1);
+    GGML_ASSERT(tensor->ne[0] == ne0);
+}
+
+static void assert_shape_2d(const struct ggml_tensor * tensor, int64_t ne0, int64_t ne1) {
+    GGML_ASSERT(tensor->n_dims == 2);
+    GGML_ASSERT(tensor->ne[0] == ne0);
+    GGML_ASSERT(tensor->ne[1] == ne1);
+}
+
+static void assert_shape_3d(const struct ggml_tensor * tensor, int64_t ne0, int64_t ne1, int64_t ne2) {
+    GGML_ASSERT(tensor->n_dims == 3);
+    GGML_ASSERT(tensor->ne[0] == ne0);
+    GGML_ASSERT(tensor->ne[1] == ne1);
+    GGML_ASSERT(tensor->ne[2] == ne2);
+}
+
+static void assert_shape_4d(const struct ggml_tensor * tensor, int64_t ne0, int64_t ne1, int64_t ne2, int64_t ne3) {
+    GGML_ASSERT(tensor->n_dims == 4);
+    GGML_ASSERT(tensor->ne[0] == ne0);
+    GGML_ASSERT(tensor->ne[1] == ne1);
+    GGML_ASSERT(tensor->ne[2] == ne2);
+    GGML_ASSERT(tensor->ne[3] == ne3);
+}
+
 static void ggml_graph_compute_helper(std::vector<uint8_t> & buf, ggml_cgraph * graph, int n_threads) {
     struct ggml_cplan plan = ggml_graph_plan(graph, n_threads);
 
@@ -483,6 +510,7 @@ static struct ggml_tensor * forward(
 
     struct ggml_tensor * tokens = ggml_new_tensor_1d(ctx0, GGML_TYPE_I32, N);
     memcpy(tokens->data, tokens_input->data, N*ggml_element_size(tokens));
+    assert_shape_1d(tokens, N);
 
     struct ggml_tensor * kc = kv_self.k;
     struct ggml_tensor * vc = kv_self.v;
@@ -494,25 +522,27 @@ static struct ggml_tensor * forward(
             data[i] = n_past + i;
         }
     }
+    assert_shape_1d(KQ_pos, N);
 
     // inpL shape [n_embd,N,1,1]
     struct ggml_tensor * inpL = ggml_get_rows(ctx0, model->tok_embeddings, tokens);
+    assert_shape_2d(inpL, n_embd, N);
+
     for (int il = 0; il < n_layer; ++il) {
         struct ggml_tensor * inpSA = inpL;
-
         struct ggml_tensor * cur;
-
-        // lctx.use_buf(ctx0, 0);
 
         // norm
         {
             // cur shape [n_embd,N,1,1]
             cur = ggml_rms_norm(ctx0, inpL, rms_norm_eps);
+            assert_shape_2d(cur, n_embd, N);
 
             // cur = attention_norm*cur
             cur = ggml_mul(ctx0,
                         ggml_repeat(ctx0, model->layers[il].attention_norm, cur),
                         cur);
+            assert_shape_2d(cur, n_embd, N);
         }
 
         // self-attention
@@ -1014,9 +1044,11 @@ static struct ggml_tensor * forward_lora(
     const int n_layer = hparams.n_layer;
     const int n_head  = hparams.n_head;
     const int n_rot   = hparams.n_rot;
+    const int n_lora  = hparams.n_lora;
 
     struct ggml_tensor * tokens = ggml_new_tensor_1d(ctx0, GGML_TYPE_I32, N);
     memcpy(tokens->data, tokens_input->data, N*ggml_element_size(tokens));
+    assert_shape_1d(tokens, N);
 
     struct ggml_tensor * kc = kv_self.k;
     struct ggml_tensor * vc = kv_self.v;
@@ -1028,32 +1060,35 @@ static struct ggml_tensor * forward_lora(
             data[i] = n_past + i;
         }
     }
+    assert_shape_1d(KQ_pos, N);
 
     // inpL shape [n_embd,N,1,1]
     struct ggml_tensor * inpL = ggml_get_rows(ctx0, model->tok_embeddings, tokens);
+    assert_shape_2d(inpL, n_embd, N);
+
     for (int il = 0; il < n_layer; ++il) {
         struct ggml_tensor * inpSA = inpL;
-
         struct ggml_tensor * cur;
 
         // norm
         {
             // cur shape [n_embd,N,1,1]
             cur = ggml_rms_norm(ctx0, inpL, rms_norm_eps);
+            assert_shape_2d(cur, n_embd, N);
 
             // cur = attention_norm*cur
             cur = ggml_mul(ctx0,
                         ggml_repeat(ctx0, model->layers[il].attention_norm, cur),
                         cur);
+            assert_shape_2d(cur, n_embd, N);
         }
 
         // self-attention
         {
             // compute Q and K and RoPE them
-            // wq   shape [n_embd, n_embd, 1, 1]
-            // wk   shape [n_embd, n_embd, 1, 1]
+            // wqa shape [n_lora, n_embd]
+            // wqb shape [n_embd, n_lora]
             // Qcur shape [n_embd/n_head, n_head, N, 1]
-            // Kcur shape [n_embd/n_head, n_head, N, 1]
             struct ggml_tensor * Qcur = ggml_rope(ctx0,
                                             ggml_reshape_3d(ctx0,
                                                 ggml_mul_mat(ctx0,
@@ -1063,6 +1098,11 @@ static struct ggml_tensor * forward_lora(
                                                         cur)),
                                                 n_embd/n_head, n_head, N),
                                             KQ_pos, n_rot, 0, 0);
+            assert_shape_3d(Qcur, n_embd/n_head, n_head, N);
+
+            // wka shape [n_lora, n_embd]
+            // wkb shape [n_embd, n_lora]
+            // Kcur shape [n_embd/n_head, n_head, N, 1]
             struct ggml_tensor * Kcur = ggml_rope(ctx0,
                                             ggml_reshape_3d(ctx0,
                                                 ggml_mul_mat(ctx0,
@@ -1072,6 +1112,7 @@ static struct ggml_tensor * forward_lora(
                                                         cur)),
                                                 n_embd/n_head, n_head, N),
                                             KQ_pos, n_rot, 0, 0);
+            assert_shape_3d(Kcur, n_embd/n_head, n_head, N);
 
             // store key and value to memory
             {

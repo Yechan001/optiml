@@ -1,3 +1,13 @@
+/**
+ * @file main.cpp
+ * @brief Main LLaMA inference example
+ *
+ * Demonstrates core LLaMA inference capabilities including:
+ * - Model loading
+ * - Text generation
+ * - Interactive chat mode
+ */
+
 #include "common.h"
 
 #include "console.h"
@@ -101,6 +111,13 @@ static void sigint_handler(int signo) {
 #endif
 
 int main(int argc, char ** argv) {
+    /**
+     * Main inference function
+     * 
+     * @param argc Command line argument count
+     * @param argv Command line arguments (model path and generation params)
+     * @return Exit status (0 on success)
+     */
     gpt_params params;
     g_params = &params;
 

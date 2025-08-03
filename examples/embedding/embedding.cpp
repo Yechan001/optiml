@@ -1,3 +1,15 @@
+/**
+ * @file embedding.cpp 
+ * @brief LLaMA embedding extraction example
+ *
+ * Demonstrates how to extract embeddings from LLaMA models
+ * for downstream NLP tasks. This example shows:
+ * - Loading a LLaMA model
+ * - Processing input text
+ * - Extracting token embeddings
+ * - Printing the embeddings vector
+ */
+
 #include "common.h"
 #include "llama.h"
 
@@ -7,7 +19,17 @@
 #pragma warning(disable: 4244 4267) // possible loss of data
 #endif
 
+/**
+ * @brief Main function for embedding extraction
+ * 
+ * @param argc Command line argument count
+ * @param argv Command line arguments:
+ *   - argv[1]: model path
+ *   - argv[2]: input text (optional)
+ * @return Exit status (0 on success, 1 on error)
+ */
 int main(int argc, char ** argv) {
+    // Initialize parameters with default values
     gpt_params params;
 
     if (!gpt_params_parse(argc, argv, params)) {

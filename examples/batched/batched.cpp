@@ -1,3 +1,10 @@
+/**
+ * @file batched.cpp 
+ * @brief Batched inference example
+ *
+ * Demonstrates parallel processing of multiple sequences
+ */
+
 #include "common.h"
 #include "llama.h"
 
@@ -7,7 +14,15 @@
 #include <string>
 #include <vector>
 
+/**
+ * @brief Main function for batched inference example
+ *
+ * @param argc Argument count
+ * @param argv Argument vector  
+ * @return int Exit code (0 on success)
+ */
 int main(int argc, char ** argv) {
+    // Initialize parameters with default values
     gpt_params params;
 
     if (argc == 1 || argv[1][0] == '-') {

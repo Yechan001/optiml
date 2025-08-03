@@ -1,3 +1,10 @@
+/**
+ * @file common.cpp
+ * @brief Common utility functions implementation
+ * 
+ * Contains shared functionality used across the project.
+ */
+
 #include "common.h"
 #include "llama.h"
 
@@ -41,48 +48,88 @@
 #pragma warning(disable: 4244 4267) // possible loss of data
 #endif
 
+/**
+ * @brief Get the number of physical CPU cores
+ * 
+ * This function detects the number of physical CPU cores by checking:
+ * - On Linux: /sys/devices/system/cpu topology info
+ * - On macOS: sysctl hw parameters
+ * - On Windows: TODO (currently falls back to logical cores/2)
+ * 
+ * @return int32_t Number of physical cores, or logical cores/2 if detection fails
+ */
 int32_t get_num_physical_cores() {
+    // Linux implementation - check CPU topology
 #ifdef __linux__
-    // enumerate the set of thread siblings, num entries is num cores
     std::unordered_set<std::string> siblings;
-    for (uint32_t cpu=0; cpu < UINT32_MAX; ++cpu) {
-        std::ifstream thread_siblings("/sys/devices/system/cpu"
-            + std::to_string(cpu) + "/topology/thread_siblings");
+    uint32_t cpu = 0;
+    
+    while (cpu < UINT32_MAX) {
+        std::string cpu_path = "/sys/devices/system/cpu" + std::to_string(cpu) + "/topology/thread_siblings";
+        std::ifstream thread_siblings(cpu_path);
+        
         if (!thread_siblings.is_open()) {
-            break; // no more cpus
+            break; // No more CPUs
         }
+
         std::string line;
         if (std::getline(thread_siblings, line)) {
             siblings.insert(line);
         }
+        cpu++;
     }
+
     if (!siblings.empty()) {
         return static_cast<int32_t>(siblings.size());
     }
+
+    // macOS implementation - use sysctl
 #elif defined(__APPLE__) && defined(__MACH__)
-    int32_t num_physical_cores;
+    int32_t num_physical_cores = 0;
     size_t len = sizeof(num_physical_cores);
-    int result = sysctlbyname("hw.perflevel0.physicalcpu", &num_physical_cores, &len, NULL, 0);
-    if (result == 0) {
+    
+    // Try perflevel first (performance cores)
+    if (sysctlbyname("hw.perflevel0.physicalcpu", &num_physical_cores, &len, NULL, 0) == 0) {
         return num_physical_cores;
     }
-    result = sysctlbyname("hw.physicalcpu", &num_physical_cores, &len, NULL, 0);
-    if (result == 0) {
+    
+    // Fall back to total physical cores
+    if (sysctlbyname("hw.physicalcpu", &num_physical_cores, &len, NULL, 0) == 0) {
         return num_physical_cores;
     }
+
+    // Windows implementation - TODO
 #elif defined(_WIN32)
-    //TODO: Implement
+    // TODO: Implement proper Windows core detection
 #endif
+
+    // Fallback: Use half of logical cores (or all if <=4)
     unsigned int n_threads = std::thread::hardware_concurrency();
     return n_threads > 0 ? (n_threads <= 4 ? n_threads : n_threads / 2) : 4;
 }
 
+/**
+ * @brief Process escape sequences in a string
+ * 
+ * Handles the following escape sequences:
+ * - \\n -> newline
+ * - \\r -> carriage return
+ * - \\t -> tab
+ * - \\' -> single quote
+ * - \\" -> double quote
+ * - \\\\ -> backslash
+ * - \\xHH -> hexadecimal character code (e.g. \\x1B for ESC)
+ * 
+ * @param input The string to process (modified in-place)
+ */
 void process_escapes(std::string& input) {
-    std::size_t input_len = input.length();
-    std::size_t output_idx = 0;
+    const size_t input_len = input.length();
+    size_t output_idx = 0;
+    size_t input_idx = 0;
 
-    for (std::size_t input_idx = 0; input_idx < input_len; ++input_idx) {
+    while (input_idx < input_len) {
         if (input[input_idx] == '\\' && input_idx + 1 < input_len) {
+            // Handle escape sequence
             switch (input[++input_idx]) {
                 case 'n':  input[output_idx++] = '\n'; break;
                 case 'r':  input[output_idx++] = '\r'; break;
@@ -90,27 +137,41 @@ void process_escapes(std::string& input) {
                 case '\'': input[output_idx++] = '\''; break;
                 case '\"': input[output_idx++] = '\"'; break;
                 case '\\': input[output_idx++] = '\\'; break;
-                case 'x':
-                    // Handle \x12, etc
+                case 'x': {
+                    // Handle hexadecimal escape sequences (\xHH)
                     if (input_idx + 2 < input_len) {
-                        const char x[3] = { input[input_idx + 1], input[input_idx + 2], 0 };
-                        char *err_p = nullptr;
-                        const long val = std::strtol(x, &err_p, 16);
-                        if (err_p == x + 2) {
+                        const char hex_digits[3] = { 
+                            input[input_idx + 1], 
+                            input[input_idx + 2], 
+                            0 
+                        };
+                        char* end_ptr = nullptr;
+                        const long char_code = std::strtol(hex_digits, &end_ptr, 16);
+                        
+                        // Only process if we have exactly 2 valid hex digits
+                        if (end_ptr == hex_digits + 2) {
                             input_idx += 2;
-                            input[output_idx++] = char(val);
+                            input[output_idx++] = static_cast<char>(char_code);
                             break;
                         }
                     }
-                    // fall through
-                default:   input[output_idx++] = '\\';
-                           input[output_idx++] = input[input_idx]; break;
+                    // Fall through if invalid hex sequence
+                    [[fallthrough]];
+                }
+                default:
+                    // Unknown escape sequence, keep both characters
+                    input[output_idx++] = '\\';
+                    input[output_idx++] = input[input_idx];
+                    break;
             }
+            input_idx++;
         } else {
-            input[output_idx++] = input[input_idx];
+            // Copy normal character
+            input[output_idx++] = input[input_idx++];
         }
     }
 
+    // Resize string to new length
     input.resize(output_idx);
 }
 
@@ -213,24 +274,27 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                 break;
             }
             sparams.top_k = std::stoi(argv[i]);
+        //////////////////////////////////
+        // Performance and memory parameters
+        //////////////////////////////////
         } else if (arg == "-c" || arg == "--ctx-size") {
             if (++i >= argc) {
                 invalid_param = true;
                 break;
             }
-            params.n_ctx = std::stoi(argv[i]);
+            params.n_ctx = std::stoi(argv[i]);  // Context window size
         } else if (arg == "--rope-freq-base") {
             if (++i >= argc) {
                 invalid_param = true;
                 break;
             }
-            params.rope_freq_base = std::stof(argv[i]);
+            params.rope_freq_base = std::stof(argv[i]);  // RoPE base frequency
         } else if (arg == "--rope-freq-scale") {
             if (++i >= argc) {
                 invalid_param = true;
                 break;
             }
-            params.rope_freq_scale = std::stof(argv[i]);
+            params.rope_freq_scale = std::stof(argv[i]);  // RoPE frequency scaling factor
         } else if (arg == "--rope-scaling") {
             if (++i >= argc) {
                 invalid_param = true;
@@ -278,13 +342,13 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
             }
             params.yarn_beta_slow = std::stof(argv[i]);
         } else if (arg == "--memory-f32") {
-            params.memory_f16 = false;
+            params.memory_f16 = false;  // Use 32-bit memory for key+value (higher precision but more memory)
         } else if (arg == "--top-p") {
             if (++i >= argc) {
                 invalid_param = true;
                 break;
             }
-            sparams.top_p = std::stof(argv[i]);
+            sparams.top_p = std::stof(argv[i]);  // Nucleus sampling probability threshold
         } else if (arg == "--min-p") {
             if (++i >= argc) {
                 invalid_param = true;
@@ -428,31 +492,34 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                 break;
             }
             params.p_split = std::stof(argv[i]);
+        //////////////////////////////////
+        // Model loading and configuration
+        //////////////////////////////////
         } else if (arg == "-m" || arg == "--model") {
             if (++i >= argc) {
                 invalid_param = true;
                 break;
             }
-            params.model = argv[i];
+            params.model = argv[i];  // Path to main model file
         } else if (arg == "-md" || arg == "--model-draft") {
             if (++i >= argc) {
                 invalid_param = true;
                 break;
             }
-            params.model_draft = argv[i];
+            params.model_draft = argv[i];  // Path to draft model for speculative decoding
         } else if (arg == "-a" || arg == "--alias") {
             if (++i >= argc) {
                 invalid_param = true;
                 break;
             }
-            params.model_alias = argv[i];
+            params.model_alias = argv[i];  // Friendly name for the model
         } else if (arg == "--lora") {
             if (++i >= argc) {
                 invalid_param = true;
                 break;
             }
             params.lora_adapter.push_back(std::make_tuple(argv[i], 1.0f));
-            params.use_mmap = false;
+            params.use_mmap = false;  // LoRA requires disabling mmap
         } else if (arg == "--lora-scaled") {
             if (++i >= argc) {
                 invalid_param = true;
@@ -464,29 +531,29 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
                 break;
             }
             params.lora_adapter.push_back(std::make_tuple(lora_adapter, std::stof(argv[i])));
-            params.use_mmap = false;
+            params.use_mmap = false;  // LoRA requires disabling mmap
         } else if (arg == "--lora-base") {
             if (++i >= argc) {
                 invalid_param = true;
                 break;
             }
-            params.lora_base = argv[i];
+            params.lora_base = argv[i];  // Base model for LoRA adapter
         } else if (arg == "--reset-gpu-index") {
-            params.reset_gpu_index = true;
+            params.reset_gpu_index = true;  // Reset GPU index before loading
         } else if (arg == "--disable-gpu-index") {
-            params.disale_gpu_index = true;
+            params.disale_gpu_index = true;  // Disable GPU index usage
         } else if (arg == "--mmproj") {
             if (++i >= argc) {
                 invalid_param = true;
                 break;
             }
-            params.mmproj = argv[i];
+            params.mmproj = argv[i];  // Path to multimodal projector file
         } else if (arg == "--image") {
             if (++i >= argc) {
                 invalid_param = true;
                 break;
             }
-            params.image = argv[i];
+            params.image = argv[i];  // Path to image file for multimodal models
         } else if (arg == "-i" || arg == "--interactive") {
             params.interactive = true;
         } else if (arg == "--embedding") {
@@ -1096,74 +1163,92 @@ std::string llama_detokenize_bpe(llama_context * ctx, const std::vector<llama_to
 //
 
 // returns true if successful, false otherwise
+/**
+ * @brief Create directory with all parent directories (cross-platform)
+ * 
+ * This function creates a directory and all necessary parent directories.
+ * It handles both Windows and Unix-like systems with appropriate path separators.
+ * 
+ * @param path Directory path to create
+ * @return true if directory was created or already exists, false on error
+ */
 bool create_directory_with_parents(const std::string & path) {
+    if (path.empty()) {
+        return false;
+    }
+
+    // Windows implementation
 #ifdef _WIN32
+    // Convert UTF-8 path to wide string for Windows API
     std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
     std::wstring wpath = converter.from_bytes(path);
 
-    // if the path already exists, check whether it's a directory
+    // Check if path already exists and is a directory
     const DWORD attributes = GetFileAttributesW(wpath.c_str());
     if ((attributes != INVALID_FILE_ATTRIBUTES) && (attributes & FILE_ATTRIBUTE_DIRECTORY)) {
         return true;
     }
 
     size_t pos_slash = 0;
+    bool success = true;
 
-    // process path from front to back, procedurally creating directories
+    // Process path from front to back, creating each directory level
     while ((pos_slash = path.find('\\', pos_slash)) != std::string::npos) {
         const std::wstring subpath = wpath.substr(0, pos_slash);
-        const wchar_t * test = subpath.c_str();
-
-        const bool success = CreateDirectoryW(test, NULL);
-        if (!success) {
+        
+        // Attempt to create directory
+        if (!CreateDirectoryW(subpath.c_str(), NULL)) {
             const DWORD error = GetLastError();
-
-            // if the path already exists, ensure that it's a directory
+            
+            // If directory already exists, verify it's actually a directory
             if (error == ERROR_ALREADY_EXISTS) {
-                const DWORD attributes = GetFileAttributesW(subpath.c_str());
-                if (attributes == INVALID_FILE_ATTRIBUTES || !(attributes & FILE_ATTRIBUTE_DIRECTORY)) {
-                    return false;
+                const DWORD sub_attr = GetFileAttributesW(subpath.c_str());
+                if (sub_attr == INVALID_FILE_ATTRIBUTES || !(sub_attr & FILE_ATTRIBUTE_DIRECTORY)) {
+                    success = false;
+                    break;
                 }
             } else {
-                return false;
+                success = false;
+                break;
             }
         }
-
         pos_slash += 1;
     }
 
-    return true;
+    return success;
 #else
-    // if the path already exists, check whether it's a directory
+    // Unix-like system implementation
+    
+    // Check if path already exists
     struct stat info;
     if (stat(path.c_str(), &info) == 0) {
-        return S_ISDIR(info.st_mode);
+        return S_ISDIR(info.st_mode);  // Return true if it's a directory
     }
 
-    size_t pos_slash = 1; // skip leading slashes for directory creation
+    size_t pos_slash = 1; // Skip leading slash
+    bool success = true;
 
-    // process path from front to back, procedurally creating directories
+    // Process path from front to back, creating each directory level
     while ((pos_slash = path.find('/', pos_slash)) != std::string::npos) {
         const std::string subpath = path.substr(0, pos_slash);
-        struct stat info;
-
-        // if the path already exists, ensure that it's a directory
+        
+        // Check if subpath exists
         if (stat(subpath.c_str(), &info) == 0) {
             if (!S_ISDIR(info.st_mode)) {
-                return false;
+                success = false;
+                break;
             }
         } else {
-            // create parent directories
-            const int ret = mkdir(subpath.c_str(), 0755);
-            if (ret != 0) {
-                return false;
+            // Create directory with standard permissions (rwxr-xr-x)
+            if (mkdir(subpath.c_str(), 0755) != 0) {
+                success = false;
+                break;
             }
         }
-
         pos_slash += 1;
     }
 
-    return true;
+    return success;
 #endif // _WIN32
 }
 

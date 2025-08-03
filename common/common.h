@@ -1,13 +1,32 @@
-// Various helper functions and utilities
+/**
+ * @file common.h
+ * @brief Common definitions and utilities for the project
+ * 
+ * This header contains shared structures, constants and utility functions
+ * used throughout the project.
+ */
 
 #pragma once
+
+#ifndef OPTIML_COMMON_H
+#define OPTIML_COMMON_H
 
 #include "llama.h"
 
 #include "sampling.h"
 
+// Logging configuration
 #define LOG_NO_FILE_LINE_FUNCTION
 #include "log.h"
+
+// Platform detection
+#if defined(_WIN32)
+#define PLATFORM_WINDOWS 1
+#elif defined(__linux__)
+#define PLATFORM_LINUX 1
+#elif defined(__APPLE__)
+#define PLATFORM_APPLE 1
+#endif
 
 #include <cmath>
 #include <string>
@@ -22,6 +41,8 @@
 #else
 #define DIRECTORY_SEPARATOR '/'
 #endif // _WIN32
+
+#endif // OPTIML_COMMON_H
 
 #define die(msg)          do { fputs("error: " msg "\n", stderr);                exit(1); } while (0)
 #define die_fmt(fmt, ...) do { fprintf(stderr, "error: " fmt "\n", __VA_ARGS__); exit(1); } while (0)
@@ -42,93 +63,129 @@ extern char const *LLAMA_BUILD_TARGET;
 //
 int32_t get_num_physical_cores();
 
+/**
+ * @brief Parameters for GPT model inference
+ * 
+ * Contains all configurable parameters for running model inference,
+ * including sampling parameters, context size, and generation settings.
+ */
 struct gpt_params {
-    uint32_t seed                           = -1;    // RNG seed
+    /// @name Basic Configuration
+    /// @{
+    uint32_t seed                           = -1;    ///< RNG seed (-1 for random)
+    /// @}
 
-    int32_t n_threads                       = get_num_physical_cores();
-    int32_t n_threads_batch                 = -1;    // number of threads to use for batch processing (-1 = use n_threads)
-    int32_t n_predict                       = -1;    // new tokens to predict
-    int32_t n_ctx                           = 512;   // context size
-    int32_t n_batch                         = 512;   // batch size for prompt processing (must be >=32 to use BLAS)
-    int32_t n_keep                          = 0;     // number of tokens to keep from initial prompt
-    int32_t n_draft                         = 16;    // number of tokens to draft during speculative decoding
-    int32_t n_chunks                        = -1;    // max number of chunks to process (-1 = unlimited)
-    int32_t n_parallel                      = 1;     // number of parallel sequences to decode
-    int32_t n_sequences                     = 1;     // number of sequences to decode
-    float   p_accept                        = 0.5f;  // speculative decoding accept probability
-    float   p_split                         = 0.1f;  // speculative decoding split probability
-    int32_t n_gpu_layers                    = -1;    // number of layers to store in VRAM (-1 - use default)
-    int32_t n_gpu_layers_draft              = -1;    // number of layers to store in VRAM for the draft model (-1 - use default)
-    int32_t main_gpu                        = 0;     // the GPU that is used for scratch and small tensors
-    float   tensor_split[LLAMA_MAX_DEVICES] = {0};   // how split tensors should be distributed across GPUs
-    int32_t n_beams                         = 0;     // if non-zero then use beam search of given width.
-    float   rope_freq_base                  = 0.0f;  // RoPE base frequency
-    float   rope_freq_scale                 = 0.0f;  // RoPE frequency scaling factor
-    float   vram_budget_gb                  = -1.0f; // VRAM budget in GB (-1 - use available VRAM)
-    float   yarn_ext_factor                 = -1.0f; // YaRN extrapolation mix factor
-    float   yarn_attn_factor                = 1.0f;  // YaRN magnitude scaling factor
-    float   yarn_beta_fast                  = 32.0f; // YaRN low correction dim
-    float   yarn_beta_slow                  = 1.0f;  // YaRN high correction dim
-    int32_t yarn_orig_ctx                   = 0;     // YaRN original context length
-    int8_t  rope_scaling_type               = LLAMA_ROPE_SCALING_UNSPECIFIED; // TODO: better to be int32_t for alignment
-                                                                              //       pinging @cebtenzzre
+    /// @name Performance Parameters
+    /// @{
+    int32_t n_threads                       = get_num_physical_cores(); ///< Number of threads for generation
+    int32_t n_threads_batch                 = -1;    ///< Threads for batch processing (-1 = use n_threads)
+    int32_t n_predict                       = -1;    ///< New tokens to predict (-1 = infinite)
+    int32_t n_ctx                           = 512;   ///< Context window size
+    int32_t n_batch                         = 512;   ///< Batch size for prompt processing
+    int32_t n_keep                          = 0;     ///< Tokens to keep from initial prompt
+    int32_t n_draft                         = 16;    ///< Tokens to draft during speculative decoding
+    int32_t n_chunks                        = -1;    ///< Max chunks to process (-1 = unlimited)
+    int32_t n_parallel                      = 1;     ///< Parallel sequences to decode
+    int32_t n_sequences                     = 1;     ///< Sequences to decode
+    float   p_accept                        = 0.5f;  ///< Speculative decoding accept probability
+    float   p_split                         = 0.1f;  ///< Speculative decoding split probability
+    /// @}
+    /// @name GPU Configuration
+    /// @{
+    int32_t n_gpu_layers                    = -1;    ///< Layers to store in VRAM (-1 = default)
+    int32_t n_gpu_layers_draft              = -1;    ///< Layers for draft model (-1 = default)
+    int32_t main_gpu                        = 0;     ///< Main GPU index
+    float   tensor_split[LLAMA_MAX_DEVICES] = {0};   ///< Tensor split across GPUs
+    int32_t n_beams                         = 0;     ///< Beam search width (0 = disabled)
+    /// @}
 
-    // // sampling parameters
-    struct llama_sampling_params sparams;
+    /// @name RoPE/YaRN Parameters
+    /// @{
+    float   rope_freq_base                  = 0.0f;  ///< RoPE base frequency
+    float   rope_freq_scale                 = 0.0f;  ///< RoPE frequency scaling
+    float   vram_budget_gb                  = -1.0f; ///< VRAM budget in GB (-1 = auto)
+    float   yarn_ext_factor                 = -1.0f; ///< YaRN extrapolation mix
+    float   yarn_attn_factor                = 1.0f;  ///< YaRN magnitude scaling
+    float   yarn_beta_fast                  = 32.0f; ///< YaRN low correction dim
+    float   yarn_beta_slow                  = 1.0f;  ///< YaRN high correction dim
+    int32_t yarn_orig_ctx                   = 0;     ///< YaRN original context length
+    int8_t  rope_scaling_type               = LLAMA_ROPE_SCALING_UNSPECIFIED; ///< RoPE scaling type
+    /// @}
 
-    std::string model             = "models/7B/ggml-model-f16.gguf"; // model path
-    std::string model_draft       = "";                              // draft model for speculative decoding
-    std::string model_alias       = "unknown"; // model alias
-    std::string prompt            = "";
-    std::string prompt_file       = "";  // store the external prompt file name
-    std::string path_prompt_cache = "";  // path to file for saving/loading prompt eval state
-    std::string input_prefix      = "";  // string to prefix user inputs with
-    std::string input_suffix      = "";  // string to suffix user inputs with
-    std::vector<std::string> antiprompt; // string upon seeing which more user input is prompted
-    std::string logdir            = "";  // directory in which to save YAML log files
+    /// @name Sampling Parameters
+    /// @{
+    struct llama_sampling_params sparams; ///< Sampling parameters
+    /// @}
 
-    // TODO: avoid tuple, use struct
-    std::vector<std::tuple<std::string, float>> lora_adapter; // lora adapter path with user defined scale
-    std::string lora_base  = "";                              // base model path for the lora adapter
+    /// @name Model & Prompt Configuration
+    /// @{
+    std::string model             = "models/7B/ggml-model-f16.gguf"; ///< Model file path
+    std::string model_draft       = "";                              ///< Draft model path
+    std::string model_alias       = "unknown"; ///< Model display name
+    std::string prompt            = ""; ///< Initial prompt
+    std::string prompt_file       = ""; ///< External prompt file
+    std::string path_prompt_cache = ""; ///< Prompt cache path
+    std::string input_prefix      = ""; ///< Prefix for user inputs
+    std::string input_suffix      = ""; ///< Suffix for user inputs
+    std::vector<std::string> antiprompt; ///< Strings that trigger new input
+    std::string logdir            = ""; ///< Directory for YAML logs
+    /// @}
 
-    bool reset_gpu_index   = false; // refresh the gpu index file
-    bool disale_gpu_index  = false; // disable loading gpu index and splitting ffn
+    /// @name LoRA Configuration
+    /// @{
+    std::vector<std::tuple<std::string, float>> lora_adapter; ///< LoRA adapters with scales
+    std::string lora_base  = "";                              ///< Base model for LoRA
+    /// @}
 
-    int  ppl_stride        = 0;     // stride for perplexity calculations. If left at 0, the pre-existing approach will be used.
-    int  ppl_output_type   = 0;     // = 0 -> ppl output is as usual, = 1 -> ppl output is num_tokens, ppl, one per line
-                                    //                                       (which is more convenient to use for plotting)
-                                    //
-    bool   hellaswag       = false; // compute HellaSwag score over random tasks from datafile supplied in prompt
-    size_t hellaswag_tasks = 400;   // number of tasks to use when computing the HellaSwag score
+    /// @name GPU Management
+    /// @{
+    bool reset_gpu_index   = false; ///< Refresh GPU index file
+    bool disale_gpu_index  = false; ///< Disable GPU index loading
+    /// @}
 
-    bool mul_mat_q         = true;  // if true, use mul_mat_q kernels instead of cuBLAS
-    bool memory_f16        = true;  // use f16 instead of f32 for memory kv
-    bool random_prompt     = false; // do not randomize prompt if none provided
-    bool use_color         = false; // use color to distinguish generations and inputs
-    bool interactive       = false; // interactive mode
-    bool prompt_cache_all  = false; // save user input and generations to prompt cache
-    bool prompt_cache_ro   = false; // open the prompt cache read-only and do not update it
+    /// @name Evaluation Parameters
+    /// @{
+    int  ppl_stride        = 0;     ///< Perplexity calculation stride
+    int  ppl_output_type   = 0;     ///< Perplexity output format
+    bool hellaswag         = false; ///< Enable HellaSwag evaluation
+    size_t hellaswag_tasks = 400;   ///< Number of HellaSwag tasks
+    /// @}
 
-    bool embedding         = false; // get only sentence embedding
-    bool escape            = false; // escape "\n", "\r", "\t", "\'", "\"", and "\\"
-    bool interactive_first = false; // wait for user input immediately
-    bool multiline_input   = false; // reverse the usage of `\`
-    bool simple_io         = false; // improves compatibility with subprocesses and limited consoles
-    bool cont_batching     = false; // insert new sequences for decoding on-the-fly
+    /// @name Memory & Performance Flags
+    /// @{
+    bool mul_mat_q         = true;  ///< Use custom matmul kernels
+    bool memory_f16        = true;  ///< Use FP16 for KV cache
+    bool use_mmap          = true;  ///< Use memory mapping
+    bool use_mlock         = false; ///< Lock model in memory
+    bool numa              = false; ///< NUMA optimizations
+    /// @}
 
-    bool input_prefix_bos  = false; // prefix BOS to user inputs, preceding input_prefix
-    bool ignore_eos        = false; // ignore generated EOS tokens
-    bool instruct          = false; // instruction mode (used for Alpaca models)
-    bool logits_all        = false; // return logits for all tokens in the batch
-    bool use_mmap          = true;  // use mmap for faster loads
-    bool use_mlock         = false; // use mlock to keep model in memory
-    bool numa              = false; // attempt optimizations that help on some NUMA systems
-    bool verbose_prompt    = false; // print prompt tokens before generation
-    bool infill            = false; // use infill mode
+    /// @name Interaction Flags
+    /// @{
+    bool random_prompt     = false; ///< Randomize empty prompts
+    bool use_color         = false; ///< Colorized output
+    bool interactive       = false; ///< Interactive mode
+    bool prompt_cache_all  = false; ///< Cache all prompts
+    bool prompt_cache_ro   = false; ///< Read-only prompt cache
+    bool embedding         = false; ///< Embedding-only mode
+    bool escape            = false; ///< Process escape sequences
+    bool interactive_first = false; ///< Immediate interactive
+    bool multiline_input   = false; ///< Multiline input mode
+    bool simple_io         = false; ///< Simplified I/O
+    bool cont_batching     = false; ///< Continuous batching
+    bool input_prefix_bos  = false; ///< Prefix BOS token
+    bool ignore_eos        = false; ///< Ignore EOS tokens
+    bool instruct          = false; ///< Instruction mode
+    bool logits_all        = false; ///< Return all logits
+    bool verbose_prompt    = false; ///< Verbose prompt
+    bool infill            = false; ///< Infill mode
+    /// @}
 
-    // multimodal models (see examples/llava)
-    std::string mmproj = ""; // path to multimodal projector
-    std::string image = ""; // path to an image file
+    /// @name Multimodal Parameters
+    /// @{
+    std::string mmproj = ""; ///< Multimodal projector path
+    std::string image = "";  ///< Image file path
+    /// @}
 };
 
 bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params);

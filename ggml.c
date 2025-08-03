@@ -295,27 +295,32 @@ ggml_fp16_t ggml_fp32_to_fp16(float x) {
 }
 
 void ggml_fp16_to_fp32_row(const ggml_fp16_t * x, float * y, int n) {
-    for (int i = 0; i < n; i++) {
+    int i = 0;
+    while (i < n) {
         y[i] = GGML_FP16_TO_FP32(x[i]);
+        i++;
     }
 }
 
 void ggml_fp32_to_fp16_row(const float * x, ggml_fp16_t * y, int n) {
     int i = 0;
 #if defined(__F16C__)
-    for (; i + 7 < n; i += 8) {
+    while (i + 7 < n) {
         __m256 x_vec = _mm256_loadu_ps(x + i);
         __m128i y_vec = _mm256_cvtps_ph(x_vec, _MM_FROUND_TO_NEAREST_INT);
         _mm_storeu_si128((__m128i *)(y + i), y_vec);
+        i += 8;
     }
-    for(; i + 3 < n; i += 4) {
+    while (i + 3 < n) {
         __m128 x_vec = _mm_loadu_ps(x + i);
         __m128i y_vec = _mm_cvtps_ph(x_vec, _MM_FROUND_TO_NEAREST_INT);
         _mm_storel_epi64((__m128i *)(y + i), y_vec);
+        i += 4;
     }
 #endif
-    for (; i < n; i++) {
+    while (i < n) {
         y[i] = GGML_FP32_TO_FP16(x[i]);
+        i++;
     }
 }
 
@@ -397,13 +402,38 @@ int64_t ggml_cycles_per_ms(void) {
 
 static const size_t CACHE_LINE_SIZE_F32 = CACHE_LINE_SIZE/sizeof(float);
 
+/**
+ * Computes dot product of two float32 vectors
+ * @param n Number of elements in vectors
+ * @param s Pointer to store result
+ * @param x First input vector
+ * @param y Second input vector
+ */
 static void ggml_vec_dot_f32(const int n, float * restrict s, const float * restrict x, const float * restrict y);
+
+/** 
+ * Computes dot product of two float16 vectors
+ * @param n Number of elements in vectors  
+ * @param s Pointer to store result
+ * @param x First input vector (fp16)
+ * @param y Second input vector (fp16)
+ */
 static void ggml_vec_dot_f16(const int n, float * restrict s, ggml_fp16_t * restrict x, ggml_fp16_t * restrict y);
 
+/**
+ * Type trait definitions for all supported tensor types
+ * Contains metadata about each data type including:
+ * - Name string
+ * - Block size for quantization 
+ * - Size in bytes
+ * - Quantization status
+ * - Operation handlers
+ */
 static const ggml_type_traits_t type_traits[GGML_TYPE_COUNT] = {
+    // 8-bit integer type
     [GGML_TYPE_I8] = {
         .type_name                = "i8",
-        .blck_size                = 1,
+        .blck_size                = 1, 
         .type_size                = sizeof(int8_t),
         .is_quantized             = false,
     },
@@ -623,19 +653,20 @@ inline static float vaddvq_f32(float32x4_t v) {
 
 #if defined(__ARM_NEON) && defined(__ARM_FEATURE_FMA)
 
+// Enable SIMD optimizations
 #define GGML_SIMD
 
-// F32 NEON
-
-#define GGML_F32_STEP 16
-#define GGML_F32_EPR  4
+// NEON (ARM) vectorization settings for float32 operations
+#define GGML_F32_STEP 16  // Number of elements processed per iteration
+#define GGML_F32_EPR  4   // Elements per register
 
 #define GGML_F32x4              float32x4_t
 #define GGML_F32x4_ZERO         vdupq_n_f32(0.0f)
 #define GGML_F32x4_SET1(x)      vdupq_n_f32(x)
-#define GGML_F32x4_LOAD         vld1q_f32
-#define GGML_F32x4_STORE        vst1q_f32
-#define GGML_F32x4_FMA(a, b, c) vfmaq_f32(a, b, c)
+// NEON vector load/store operations
+#define GGML_F32x4_LOAD         vld1q_f32  // Load 4 floats from memory
+#define GGML_F32x4_STORE        vst1q_f32  // Store 4 floats to memory
+#define GGML_F32x4_FMA(a, b, c) vfmaq_f32(a, b, c)  // Fused multiply-add
 #define GGML_F32x4_ADD          vaddq_f32
 #define GGML_F32x4_MUL          vmulq_f32
 #define GGML_F32x4_REDUCE_ONE(x) vaddvq_f32(x)
@@ -988,19 +1019,30 @@ inline static void __wasm_f16x4_store(ggml_fp16_t * p, v128_t x) {
 #define GGML_F16x4_FMA         GGML_F32x4_FMA
 #define GGML_F16x4_ADD         wasm_f32x4_add
 #define GGML_F16x4_MUL         wasm_f32x4_mul
+/**
+ * Reduces WASM SIMD registers by summing elements
+ * @param res Scalar result
+ * @param x   SIMD registers to reduce
+ */
 #define GGML_F16x4_REDUCE(res, x)                  \
 {                                                  \
     int offset = GGML_F16_ARR >> 1;                \
-    for (int i = 0; i < offset; ++i) {             \
+    int i = 0;                                     \
+    while (i < offset) {                           \
         x[i] = wasm_f32x4_add(x[i], x[offset+i]);  \
+        i++;                                       \
     }                                              \
     offset >>= 1;                                  \
-    for (int i = 0; i < offset; ++i) {             \
+    i = 0;                                         \
+    while (i < offset) {                           \
         x[i] = wasm_f32x4_add(x[i], x[offset+i]);  \
+        i++;                                       \
     }                                              \
     offset >>= 1;                                  \
-    for (int i = 0; i < offset; ++i) {             \
+    i = 0;                                         \
+    while (i < offset) {                           \
         x[i] = wasm_f32x4_add(x[i], x[offset+i]);  \
+        i++;                                       \
     }                                              \
     res = wasm_f32x4_extract_lane(x[0], 0) +       \
           wasm_f32x4_extract_lane(x[0], 1) +       \
@@ -1040,19 +1082,30 @@ inline static void __wasm_f16x4_store(ggml_fp16_t * p, v128_t x) {
 #endif
 #define GGML_F32x4_ADD     _mm_add_ps
 #define GGML_F32x4_MUL     _mm_mul_ps
+/**
+ * Reduces SSE SIMD registers by summing elements
+ * @param res Scalar result
+ * @param x   SIMD registers to reduce
+ */
 #define GGML_F32x4_REDUCE(res, x)                                 \
 {                                                                 \
     int offset = GGML_F32_ARR >> 1;                               \
-    for (int i = 0; i < offset; ++i) {                            \
+    int i = 0;                                                    \
+    while (i < offset) {                                          \
         x[i] = _mm_add_ps(x[i], x[offset+i]);                     \
+        i++;                                                      \
     }                                                             \
     offset >>= 1;                                                 \
-    for (int i = 0; i < offset; ++i) {                            \
+    i = 0;                                                        \
+    while (i < offset) {                                          \
         x[i] = _mm_add_ps(x[i], x[offset+i]);                     \
+        i++;                                                      \
     }                                                             \
     offset >>= 1;                                                 \
-    for (int i = 0; i < offset; ++i) {                            \
+    i = 0;                                                        \
+    while (i < offset) {                                          \
         x[i] = _mm_add_ps(x[i], x[offset+i]);                     \
+        i++;                                                      \
     }                                                             \
     const __m128 t0 = _mm_hadd_ps(x[0], x[0]);                    \
     res = _mm_cvtss_f32(_mm_hadd_ps(t0, t0));                     \
@@ -1137,15 +1190,53 @@ inline static void ggml_vec_set_i32(const int n, int32_t * x, const int32_t v) {
 
 inline static void ggml_vec_set_f16(const int n, ggml_fp16_t * x, const int32_t v) { for (int i = 0; i < n; ++i) x[i] = v; }
 
-inline static void ggml_vec_add_f32 (const int n, float * z, const float * x, const float * y) { for (int i = 0; i < n; ++i) z[i]  = x[i] + y[i]; }
+/**
+ * Element-wise addition of two float32 vectors
+ * @param n Number of elements
+ * @param z Output vector
+ * @param x First input vector
+ * @param y Second input vector
+ */
+inline static void ggml_vec_add_f32 (const int n, float * z, const float * x, const float * y) {
+    int i = 0;
+    while (i < n) {
+        z[i] = x[i] + y[i];
+        i++;
+    }
+}
 inline static void ggml_vec_add1_f32(const int n, float * z, const float * x, const float   v) { for (int i = 0; i < n; ++i) z[i]  = x[i] + v;    }
 inline static void ggml_vec_acc_f32 (const int n, float * y, const float * x)                  { for (int i = 0; i < n; ++i) y[i] += x[i];        }
 inline static void ggml_vec_acc1_f32(const int n, float * y, const float   v)                  { for (int i = 0; i < n; ++i) y[i] += v;           }
 inline static void ggml_vec_sub_f32 (const int n, float * z, const float * x, const float * y) { for (int i = 0; i < n; ++i) z[i]  = x[i] - y[i]; }
 inline static void ggml_vec_set_f32 (const int n, float * x, const float   v)                  { for (int i = 0; i < n; ++i) x[i]  = v;           }
-inline static void ggml_vec_cpy_f32 (const int n, float * y, const float * x)                  { for (int i = 0; i < n; ++i) y[i]  = x[i];        }
+/**
+ * Copies elements from one float32 vector to another
+ * @param n Number of elements
+ * @param y Destination vector
+ * @param x Source vector
+ */
+inline static void ggml_vec_cpy_f32 (const int n, float * y, const float * x) {
+    int i = 0;
+    while (i < n) {
+        y[i] = x[i];
+        i++;
+    }
+}
 inline static void ggml_vec_neg_f32 (const int n, float * y, const float * x)                  { for (int i = 0; i < n; ++i) y[i]  = -x[i];       }
-inline static void ggml_vec_mul_f32 (const int n, float * z, const float * x, const float * y) { for (int i = 0; i < n; ++i) z[i]  = x[i]*y[i];   }
+/**
+ * Element-wise multiplication of two float32 vectors
+ * @param n Number of elements
+ * @param z Output vector
+ * @param x First input vector
+ * @param y Second input vector
+ */
+inline static void ggml_vec_mul_f32 (const int n, float * z, const float * x, const float * y) {
+    int i = 0;
+    while (i < n) {
+        z[i] = x[i] * y[i];
+        i++;
+    }
+}
 inline static void ggml_vec_div_f32 (const int n, float * z, const float * x, const float * y) { for (int i = 0; i < n; ++i) z[i]  = x[i]/y[i];   }
 
 static void ggml_vec_dot_f32(const int n, float * restrict s, const float * restrict x, const float * restrict y) {
@@ -1359,7 +1450,19 @@ inline static void ggml_vec_mad_f32_unroll(const int n, const int xs, const int 
 #endif
 }
 
-//inline static void ggml_vec_scale_f32(const int n, float * y, const float   v) { for (int i = 0; i < n; ++i) y[i] *= v;          }
+/**
+ * Scales a float32 vector by constant factor
+ * @param n Number of elements
+ * @param y Vector to scale (modified in-place)
+ * @param v Scaling factor
+ */
+inline static void ggml_vec_scale_f32(const int n, float * y, const float v) {
+    int i = 0;
+    while (i < n) {
+        y[i] *= v;
+        i++;
+    }
+}
 inline static void ggml_vec_scale_f32(const int n, float * y, const float   v) {
 #if defined(GGML_USE_ACCELERATE)
     vDSP_vsmul(y, 1, &v, y, 1, n);

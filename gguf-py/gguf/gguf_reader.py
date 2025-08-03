@@ -62,6 +62,25 @@ class ReaderTensor(NamedTuple):
 
 
 class GGUFReader:
+    """
+    Main GGUF file reader implementation.
+    
+    Handles reading and parsing of GGUF model files, including:
+    - File header validation and version checking
+    - Metadata key/value pair extraction
+    - Tensor data loading and quantization handling
+    
+    Attributes:
+        data (np.memmap): Memory-mapped file data
+        byte_order (str): Byte order ('I' for native, 'S' for swapped)
+        alignment (int): Data alignment requirement
+        fields (OrderedDict): Parsed metadata fields
+        tensors (list): Loaded tensor information
+    
+    Example:
+        >>> reader = GGUFReader("model.gguf")
+        >>> print(reader.fields["general.architecture"])
+    """
     # I - same as host, S - swapped
     byte_order: Literal['I' | 'S'] = 'I'
     alignment: int = GGUF_DEFAULT_ALIGNMENT
@@ -82,6 +101,16 @@ class GGUFReader:
     }
 
     def __init__(self, path: os.PathLike[str] | str, mode: Literal['r' | 'r+' | 'c'] = 'r'):
+        """
+        Initialize GGUF reader with file path.
+        
+        Args:
+            path: Path to GGUF file
+            mode: File open mode ('r', 'r+', or 'c' for copy-on-write)
+            
+        Raises:
+            ValueError: If file magic is invalid or version is unsupported
+        """
         self.data = np.memmap(path, mode = mode)
         offs = 0
         if self._get(offs, np.uint32, override_order = '<')[0] != GGUF_MAGIC:
@@ -119,10 +148,31 @@ class GGUFReader:
 
     # Fetch a key/value metadata field by key.
     def get_field(self, key: str) -> Union[ReaderField, None]:
+        """
+        Get metadata field by key.
+        
+        Args:
+            key: Metadata key to retrieve
+            
+        Returns:
+            ReaderField if key exists, None otherwise
+        """
         return self.fields.get(key, None)
 
     # Fetch a tensor from the list by index.
     def get_tensor(self, idx: int) -> ReaderTensor:
+        """
+        Get tensor by index.
+        
+        Args:
+            idx: Tensor index
+            
+        Returns:
+            Requested ReaderTensor
+            
+        Raises:
+            IndexError: If index is out of bounds
+        """
         return self.tensors[idx]
 
     def _get(

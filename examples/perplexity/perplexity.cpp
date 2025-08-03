@@ -1,3 +1,10 @@
+/**
+ * @file perplexity.cpp
+ * @brief Perplexity calculation example
+ *
+ * Demonstrates calculating perplexity for text evaluation
+ */
+
 #include "common.h"
 #include "llama.h"
 
@@ -677,7 +684,15 @@ static void hellaswag_score(llama_context * ctx, const gpt_params & params) {
     printf("\n");
 }
 
+/**
+ * @brief Main function for perplexity calculation
+ *
+ * @param argc Argument count
+ * @param argv Argument vector
+ * @return int Exit code (0 on success)
+ */
 int main(int argc, char ** argv) {
+    // Initialize parameters with default values
     gpt_params params;
 
     params.n_batch = 512;

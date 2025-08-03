@@ -2,6 +2,20 @@ from __future__ import annotations
 
 import os
 import shutil
+"""
+GGUF (GPT-Generated Unified Format) file writer implementation.
+
+This module provides the core functionality for writing GGUF model files,
+including metadata serialization and tensor data writing.
+"""
+
+"""
+GGUF (GPT-Generated Unified Format) file writer implementation.
+
+This module provides the core functionality for writing GGUF model files,
+including metadata serialization and tensor data writing.
+"""
+
 import struct
 import tempfile
 from enum import Enum, auto
@@ -31,6 +45,40 @@ class WriterState(Enum):
 
 
 class GGUFWriter:
+    """
+    Main GGUF file writer class.
+    
+    Handles creation and writing of GGUF model files with:
+    - File header writing
+    - Metadata serialization 
+    - Tensor data writing
+    
+    Attributes:
+        fout: Output file object
+        arch: Model architecture string
+        offset_tensor: Current tensor data offset
+        data_alignment: Data alignment requirement
+        kv_data: Metadata key-value pairs
+        tensors: List of tensor information
+        endian: Endianness for binary data
+    """
+    """
+    Main GGUF file writer class.
+    
+    Handles creation and writing of GGUF model files with:
+    - File header writing
+    - Metadata serialization 
+    - Tensor data writing
+    
+    Attributes:
+        fout: Output file object
+        arch: Model architecture string
+        offset_tensor: Current tensor data offset
+        data_alignment: Data alignment requirement
+        kv_data: Metadata key-value pairs
+        tensors: List of tensor information
+        endian: Endianness for binary data
+    """
     fout: BufferedWriter
     temp_file: tempfile.SpooledTemporaryFile[bytes] | None
     tensors: list[np.ndarray[Any, Any]]

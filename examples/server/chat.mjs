@@ -1,3 +1,10 @@
+/**
+ * @file chat.mjs
+ * @brief Server-side chat example
+ *
+ * Demonstrates a web-based chat interface for LLaMA models
+ */
+
 import * as readline from 'node:readline'
 import { stdin, stdout } from 'node:process'
 import { readFileSync } from 'node:fs'
@@ -53,12 +60,24 @@ const chat = [
 
 const instruction = `A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions.`
 
+/**
+ * @brief Format chat prompt with conversation history
+ * 
+ * @param question Current user question
+ * @returns Formatted prompt string with full conversation context
+ */
 function format_prompt(question) {
     return `${instruction}\n${
         chat.map(m =>`### Human: ${m.human}\n### Assistant: ${m.assistant}`).join("\n")
     }\n### Human: ${question}\n### Assistant:`
 }
 
+/**
+ * @brief Tokenize input content
+ * 
+ * @param content Input text to tokenize
+ * @returns Promise resolving to token array
+ */
 async function tokenize(content) {
     const result = await fetch(`${API_URL}/tokenize`, {
         method: 'POST',
@@ -74,6 +93,12 @@ async function tokenize(content) {
 
 const n_keep = await tokenize(instruction).length
 
+/**
+ * @brief Handle chat completion requests
+ * 
+ * @param question User input question
+ * @returns Promise resolving when completion is done
+ */
 async function chat_completion(question) {
     const result = await fetch(`${API_URL}/completion`, {
         method: 'POST',

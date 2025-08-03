@@ -65,7 +65,7 @@ Decoder-only transformer families commonly distributed in GGUF or other quantize
 ### 1) Build from source
 
 ```bash
-git clone https://github.com/your-org/optiml.git
+git clone https://github.com/NU-QRG/optiml.git
 cd optiml
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release   -DOPTIML_CUBLAS=ON \        # CUDA (NVIDIA)

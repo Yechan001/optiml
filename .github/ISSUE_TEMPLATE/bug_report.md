@@ -9,7 +9,6 @@ assignees: ''
 
 > [!IMPORTANT]
 > To facilitate communication among users across the world, please use **English** when reporting an issue.
-> **[FOR KOREAN USERS]** 문제를 게시할 때 영어를 사용해 주세요.
 
 **Describe the bug**
 A clear and concise description of what the bug is.

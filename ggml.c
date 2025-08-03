@@ -1456,13 +1456,6 @@ inline static void ggml_vec_mad_f32_unroll(const int n, const int xs, const int 
  * @param y Vector to scale (modified in-place)
  * @param v Scaling factor
  */
-inline static void ggml_vec_scale_f32(const int n, float * y, const float v) {
-    int i = 0;
-    while (i < n) {
-        y[i] *= v;
-        i++;
-    }
-}
 inline static void ggml_vec_scale_f32(const int n, float * y, const float   v) {
 #if defined(GGML_USE_ACCELERATE)
     vDSP_vsmul(y, 1, &v, y, 1, n);

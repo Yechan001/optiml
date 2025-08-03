@@ -1456,13 +1456,6 @@ inline static void ggml_vec_mad_f32_unroll(const int n, const int xs, const int 
  * @param y Vector to scale (modified in-place)
  * @param v Scaling factor
  */
-inline static void ggml_vec_scale_f32(const int n, float * y, const float v) {
-    int i = 0;
-    while (i < n) {
-        y[i] *= v;
-        i++;
-    }
-}
 inline static void ggml_vec_scale_f32(const int n, float * y, const float   v) {
 #if defined(GGML_USE_ACCELERATE)
     vDSP_vsmul(y, 1, &v, y, 1, n);
@@ -19705,7 +19698,7 @@ struct gguf_context * gguf_init_empty(void) {
 
 struct gguf_context * gguf_init_empty_sparse(void) {
     struct gguf_context * ctx = gguf_init_empty();
-    memcpy(ctx->header.magic, GGUF_Optiml_MAGIC, sizeof(ctx->header.magic));
+    memcpy(ctx->header.magic, 0, sizeof(ctx->header.magic));
     return ctx;
 }
 
@@ -19727,7 +19720,7 @@ struct gguf_context * gguf_init_from_file(const char * fname, struct gguf_init_p
 
         if (strncmp(magic, GGUF_MAGIC, sizeof(magic)) == 0) {
             sparse_deriv = GGML_DENSE_INFERENCE;
-        } else if (strncmp(magic, GGUF_Optiml_MAGIC, sizeof(magic)) == 0) {
+        } else if (strncmp(magic, 0, sizeof(magic)) == 0) {
             sparse_deriv = GGML_SPARSE_INFERENCE;
         } else {
             fprintf(stderr, "%s: invalid magic characters %s.\n", __func__, magic);

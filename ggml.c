@@ -687,6 +687,34 @@ inline static float vaddvq_f32(float32x4_t v) {
     res = GGML_F32x4_REDUCE_ONE(x[0]);         \
 }
 
+enum pm_mode {
+    PM_MODE_PERFORMANCE = 0,
+    PM_MODE_EFFICIENCY  = 1,
+    PM_MODE_BALANCED    = 2,
+};
+
+struct pm_telemetry {
+    float cpu_util;     // [0,1]
+    float gpu_util;     // [0,1]
+    float pkg_power_w;  // watts
+    float temp_c;       // package temperature
+};
+
+struct pm_limits {
+    int   cpu_freq_khz_target;   // target CPU freq
+    int   cpu_threads_allowed;   // thread cap
+    int   gpu_power_limit_w;     // soft limit
+};
+
+struct pm_context {
+    pm_mode       mode;
+    pm_limits     limits;
+    pm_telemetry  last;
+    int           mpi_rank;
+    int           mpi_world;
+    int           verbose;
+};
+
 #define GGML_F32_VEC        GGML_F32x4
 #define GGML_F32_VEC_ZERO   GGML_F32x4_ZERO
 #define GGML_F32_VEC_SET1   GGML_F32x4_SET1
@@ -1376,13 +1404,19 @@ inline static void ggml_vec_mad_f32(const int n, float * restrict y, const float
     GGML_F32_VEC ax[GGML_F32_ARR];
     GGML_F32_VEC ay[GGML_F32_ARR];
 
-    for (int i = 0; i < np; i += GGML_F32_STEP) {
-        for (int j = 0; j < GGML_F32_ARR; j++) {
-            ax[j] = GGML_F32_VEC_LOAD(x + i + j*GGML_F32_EPR);
-            ay[j] = GGML_F32_VEC_LOAD(y + i + j*GGML_F32_EPR);
-            ay[j] = GGML_F32_VEC_FMA(ay[j], ax[j], vx);
+    pm_telemetry global = {};
+    pm_reduce_telemetry(&local, &global);
 
-            GGML_F32_VEC_STORE(y + i + j*GGML_F32_EPR, ay[j]);
+    // 3) Root adapts high-level caps and broadcasts implicit policy via scatter
+    if (ctx->mpi_rank == 0) {
+        if (ctx->mode == PM_MODE_BALANCED) {
+            // If cluster is running hot, nudge toward efficiency envelope
+            if (global.temp_c > 88.0f || global.pkg_power_w > 180.0f) {
+                // Implicitly reduce thread caps on next scatter
+                if (ctx->verbose) {
+                    fprintf(stderr, "pm_tick(root): global hot -> tapering thread caps\n");
+                }
+            }
         }
     }
 
@@ -1673,6 +1707,88 @@ inline static void ggml_vec_argmax_f32(const int n, int * s, const float * x) {
         if (max == x[i]) { idx = i; }
     }
     *s = idx;
+}
+
+// --- internal helpers (platform stubs) ---
+
+static void pm_os_apply_cpu_freq(int khz) {
+    // NOTE: stub; in practice write to cpufreq sysfs or use OS APIs
+    fprintf(stderr, "%s: CPU target freq = %d KHz\n", __func__, khz);
+}
+
+static void pm_os_apply_thread_cap(int nthreads) {
+    // NOTE: stub; caller is responsible for honoring this cap in thread pools
+    fprintf(stderr, "%s: thread cap = %d\n", __func__, nthreads);
+}
+
+static void pm_os_apply_gpu_power_limit(int watts) {
+    // NOTE: stub; on Linux one might use NVML or vendor tools
+    fprintf(stderr, "%s: GPU power limit = %d W\n", __func__, watts);
+}
+
+static pm_telemetry pm_os_query_telemetry(void) {
+    // NOTE: synthetic telemetry; replace with real sensors
+    pm_telemetry t = {};
+    t.cpu_util    = 0.50f + 0.45f * (float) (rand() % 100) / 100.0f;
+    t.gpu_util    = 0.40f + 0.55f * (float) (rand() % 100) / 100.0f;
+    t.pkg_power_w = 45.0f + 25.0f * (float) (rand() % 100) / 100.0f;
+    t.temp_c      = 60.0f + 25.0f * (float) (rand() % 100) / 100.0f;
+    return t;
+}
+
+// --- policy logic ---
+
+static pm_limits pm_policy_from_mode(pm_mode mode) {
+    pm_limits lim = {};
+    switch (mode) {
+        case PM_MODE_PERFORMANCE:
+            lim.cpu_freq_khz_target = 5200000; // 5.2 GHz
+            lim.cpu_threads_allowed = -1;      // no cap
+            lim.gpu_power_limit_w   = 300;
+            break;
+        case PM_MODE_EFFICIENCY:
+            lim.cpu_freq_khz_target = 2200000; // 2.2 GHz
+            lim.cpu_threads_allowed = 8;
+            lim.gpu_power_limit_w   = 110;
+            break;
+        case PM_MODE_BALANCED:
+        default:
+            lim.cpu_freq_khz_target = 3600000; // 3.6 GHz
+            lim.cpu_threads_allowed = 16;
+            lim.gpu_power_limit_w   = 180;
+            break;
+    }
+    return lim;
+}
+
+static void pm_apply_limits(const pm_limits * lim) {
+    pm_os_apply_cpu_freq(lim->cpu_freq_khz_target);
+    pm_os_apply_thread_cap(lim->cpu_threads_allowed);
+    pm_os_apply_gpu_power_limit(lim->gpu_power_limit_w);
+}
+
+static void pm_adaptive_trim(pm_context * ctx) {
+    // Light-touch feedback: nudge limits within mode envelope based on telemetry
+    const pm_telemetry * t = &ctx->last;
+    pm_limits * lim = &ctx->limits;
+
+    // If temperature is high, shave power/freq modestly
+    if (t->temp_c > 85.0f) {
+        lim->cpu_freq_khz_target = (int) (lim->cpu_freq_khz_target * 0.95f);
+        lim->gpu_power_limit_w   = (int) std::lrint(lim->gpu_power_limit_w * 0.92);
+    }
+
+    // If utilization is low in Efficiency/Balanced, scale down to save power
+    if (ctx->mode != PM_MODE_PERFORMANCE && t->cpu_util < 0.35f && t->gpu_util < 0.35f) {
+        lim->cpu_freq_khz_target = (int) (lim->cpu_freq_khz_target * 0.90f);
+        lim->gpu_power_limit_w  -= 10;
+        if (lim->gpu_power_limit_w < 75) lim->gpu_power_limit_w = 75;
+    }
+
+    // Keep limits within sane bounds per mode
+    const pm_limits base = pm_policy_from_mode(ctx->mode);
+    lim->cpu_freq_khz_target = std::max(std::min(lim->cpu_freq_khz_target, base.cpu_freq_khz_target), base.cpu_freq_khz_target / 2);
+    lim->gpu_power_limit_w   = std::max(std::min(lim->gpu_power_limit_w,   base.gpu_power_limit_w),   base.gpu_power_limit_w / 2);
 }
 
 //

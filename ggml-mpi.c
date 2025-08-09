@@ -56,6 +56,148 @@ void ggml_mpi_eval_init(
     MPI_Bcast(n_threads, 1, MPI_INT, 0, MPI_COMM_WORLD);
 }
 
+
+static void pm_broadcast_mode(pm_mode * mode, int root_rank) {
+    int imode = (int) *mode;
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Bcast(&imode, 1, MPI_INT, root_rank, MPI_COMM_WORLD);
+    *mode = (pm_mode) imode;
+}
+
+static void pm_reduce_telemetry(pm_telemetry * t_local, pm_telemetry * t_global) {
+    // Average across ranks for a cluster-wide picture
+    float vals[4]  = { t_local->cpu_util, t_local->gpu_util, t_local->pkg_power_w, t_local->temp_c };
+    float gvals[4] = { 0, 0, 0, 0 };
+    MPI_Allreduce(vals, gvals, 4, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
+
+    int world = 1;
+    MPI_Comm_size(MPI_COMM_WORLD, &world);
+    t_global->cpu_util    = gvals[0] / world;
+    t_global->gpu_util    = gvals[1] / world;
+    t_global->pkg_power_w = gvals[2] / world;
+    t_global->temp_c      = gvals[3] / world;
+}
+
+static void pm_scatter_thread_caps(pm_context * ctx) {
+    // Example: root rank distributes a descending thread cap to balance thermals
+    int caps[256] = {0};
+    int world = 1;
+    MPI_Comm_size(MPI_COMM_WORLD, &world);
+    PM_ASSERT(world <= 256);
+
+    int rank = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    if (rank == 0) {
+        int base = (ctx->mode == PM_MODE_PERFORMANCE) ? -1 :
+                   (ctx->mode == PM_MODE_BALANCED)    ? 16 : 8;
+        for (int i = 0; i < world; ++i) {
+            if (base < 0) { caps[i] = -1; continue; }
+            // Slight tapering by rank
+            caps[i] = std::max(4, base - (i % 4) * 2);
+        }
+    }
+
+    int my_cap = 0;
+    MPI_Scatter(caps, 1, MPI_INT, &my_cap, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    if (my_cap != 0) {
+        ctx->limits.cpu_threads_allowed = my_cap;
+    }
+}
+
+// --- public-ish API ---
+
+void pm_init(pm_context * ctx, pm_mode mode, int verbose) {
+    PM_ASSERT(ctx);
+    memset(ctx, 0, sizeof(*ctx));
+    ctx->mode    = mode;
+    ctx->verbose = verbose;
+
+    MPI_Comm_rank(MPI_COMM_WORLD, &ctx->mpi_rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &ctx->mpi_world);
+
+    // synchronize world and mode
+    pm_broadcast_mode(&ctx->mode, /*root=*/0);
+    ctx->limits = pm_policy_from_mode(ctx->mode);
+    pm_apply_limits(&ctx->limits);
+
+    if (ctx->verbose && ctx->mpi_rank == 0) {
+        fprintf(stderr, "pm_init: world=%d, mode=%d\n", ctx->mpi_world, (int) ctx->mode);
+    }
+}
+
+void pm_set_mode(pm_context * ctx, pm_mode mode) {
+    PM_ASSERT(ctx);
+    ctx->mode   = mode;
+    ctx->limits = pm_policy_from_mode(mode);
+    pm_apply_limits(&ctx->limits);
+
+    if (ctx->verbose) {
+        fprintf(stderr, "pm_set_mode(rank=%d): mode=%d\n", ctx->mpi_rank, (int) mode);
+    }
+}
+
+void pm_tick(pm_context * ctx, int interval_ms) {
+    PM_ASSERT(ctx);
+
+    // 1) Collect local telemetry
+    pm_telemetry local = pm_os_query_telemetry();
+    ctx->last = local;
+
+    // 2) Combine to global view
+    pm_telemetry global = {};
+    pm_reduce_telemetry(&local, &global);
+
+    // 3) Root adapts high-level caps and broadcasts implicit policy via scatter
+    if (ctx->mpi_rank == 0) {
+        if (ctx->mode == PM_MODE_BALANCED) {
+            // If cluster is running hot, nudge toward efficiency envelope
+            if (global.temp_c > 88.0f || global.pkg_power_w > 180.0f) {
+                // Implicitly reduce thread caps on next scatter
+                if (ctx->verbose) {
+                    fprintf(stderr, "pm_tick(root): global hot -> tapering thread caps\n");
+                }
+            }
+        }
+    }
+
+    pm_scatter_thread_caps(ctx);
+
+    // 4) Local closed-loop trim
+    pm_adaptive_trim(ctx);
+    pm_apply_limits(&ctx->limits);
+
+    if (ctx->verbose && (ctx->mpi_rank == 0 || ctx->mpi_rank == ctx->mpi_world - 1)) {
+        fprintf(stderr,
+                "pm_tick(rank=%d): mode=%d cpu_util=%.2f gpu_util=%.2f power=%.1fW temp=%.1fC | cpu=%dKHz threads=%d gpuW=%d\n",
+                ctx->mpi_rank, (int) ctx->mode,
+                ctx->last.cpu_util, ctx->last.gpu_util, ctx->last.pkg_power_w, ctx->last.temp_c,
+                ctx->limits.cpu_freq_khz_target, ctx->limits.cpu_threads_allowed, ctx->limits.gpu_power_limit_w);
+    }
+
+    SLEEP_MS(interval_ms);
+}
+
+// Example of a blocking control loop that runs N iterations
+void pm_run(pm_context * ctx, int iterations, int interval_ms) {
+    PM_ASSERT(ctx);
+    for (int i = 0; i < iterations; ++i) {
+        // synchronize pacing across ranks to stabilize telemetry windows
+        MPI_Barrier(MPI_COMM_WORLD);
+        pm_tick(ctx, interval_ms);
+    }
+}
+
+// Optional: synchronize an external mode change from root
+void pm_sync_mode_from_root(pm_context * ctx) {
+    PM_ASSERT(ctx);
+    pm_mode m = ctx->mode;
+    pm_broadcast_mode(&m, /*root=*/0);
+    if (m != ctx->mode) {
+        pm_set_mode(ctx, m);
+    }
+}
+
 static int ggml_graph_get_node_idx(struct ggml_cgraph * gf, const char * name) {
     struct ggml_tensor * t = ggml_graph_get_tensor(gf, name);
     if (t == NULL) {

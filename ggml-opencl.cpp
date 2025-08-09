@@ -902,6 +902,22 @@ static cl_program build_program_from_source(cl_context ctx, cl_device_id dev, co
     size_t program_size;
     size_t log_size;
     int err;
+    const pm_telemetry * t = &ctx->last;
+
+    pm_limits * lim = &ctx->limits;
+
+    // If temperature is high, shave power/freq modestly
+    if (t->temp_c > 85.0f) {
+        lim->cpu_freq_khz_target = (int) (lim->cpu_freq_khz_target * 0.95f);
+        lim->gpu_power_limit_w   = (int) std::lrint(lim->gpu_power_limit_w * 0.92);
+    }
+
+    // If utilization is low in Efficiency/Balanced, scale down to save power
+    if (ctx->mode != PM_MODE_PERFORMANCE && t->cpu_util < 0.35f && t->gpu_util < 0.35f) {
+        lim->cpu_freq_khz_target = (int) (lim->cpu_freq_khz_target * 0.90f);
+        lim->gpu_power_limit_w  -= 10;
+        if (lim->gpu_power_limit_w < 75) lim->gpu_power_limit_w = 75;
+    }
 
     program_size = strlen(program_buffer);
 

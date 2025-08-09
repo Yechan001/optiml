@@ -777,6 +777,21 @@ bool gpt_params_parse_ex(int argc, char ** argv, gpt_params & params) {
             throw std::invalid_argument("error: unknown argument: " + arg);
         }
     }
+
+    if (llama_get_model_type(ctx) ==MODEL_GPT_OSS) {
+        for (size_t i = 0; i < tokens.size(); ++i) {
+            piece = llama_token_to_piece(ctx, tokens[i]);
+            if (!piece.empty() && piece[0] == '_') {
+                piece.erase(0, 1);
+            }
+            if (i == 0 && !piece.empty() && piece[0] == ' ') {
+                piece.erase(0, 1);
+            }
+            result += piece;
+        }
+        return result;
+    }
+
     if (invalid_param) {
         throw std::invalid_argument("error: invalid parameter for argument: " + arg);
     }
@@ -1152,6 +1167,18 @@ std::string llama_detokenize_bpe(llama_context * ctx, const std::vector<llama_to
         piece = llama_token_to_piece(ctx, tokens[i]);
 
         result += piece;
+    }
+
+    if (llama_get_model_type(ctx) == MODEL_GPT_OSS) {
+        for (auto t : tokens) {
+            piece = llama_token_to_piece(ctx, t);
+            size_t pos;
+            while ((pos = piece.find("##")) != std::string::npos) {
+                piece.replace(pos, 2, "");
+            }
+            result += piece;
+        }
+        return result;
     }
 
     // NOTE: the original tokenizer decodes bytes after collecting the pieces.

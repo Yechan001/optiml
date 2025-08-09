@@ -447,21 +447,33 @@ static ggml_tallocr_t node_tallocr(ggml_gallocr_t galloc, struct ggml_tensor * n
 }
 
 static void init_view(ggml_gallocr_t galloc, struct ggml_tensor * view, bool update_backend) {
+    GGML_ASSERT(view != NULL);
+    GGML_ASSERT(view->view_src != NULL);
+
+    struct ggml_tensor * src = view->view_src;
+
     ggml_tallocr_t alloc = node_tallocr(galloc, view);
+    GGML_ASSERT(alloc != NULL);
 
-    //printf("init_view: %s from src %s\n", view->name, view->view_src->name);
-    GGML_ASSERT(view->view_src != NULL && view->view_src->data != NULL);
+    const bool measuring = ggml_tallocr_is_measure(alloc);
+
+    // Source tensor must have data unless we're in a measuring pass
+    GGML_ASSERT(measuring || src->data != NULL);
+
+    // Optionally inherit backend from the source tensor
     if (update_backend) {
-        view->backend = view->view_src->backend;
+        view->backend = src->backend;
     }
-    view->buffer  = view->view_src->buffer;
-    view->data    = (char *)view->view_src->data + view->view_offs;
 
-    // FIXME: the view should be initialized by the owning buffer, but currently this breaks the CUDA backend
-    // due to the ggml_tensor_extra_gpu ring buffer overwriting the KV cache extras
-    assert(ggml_tallocr_is_measure(alloc) || !view->buffer || view->buffer->backend == alloc->buffer->backend);
+    // Views share the same buffer; data pointer is src->data + view offset
+    view->buffer = src->buffer;
+    view->data   = (char *) src->data + view->view_offs;
 
-    if (!alloc->measure) {
+    // The view should be initialized by the owning buffer.
+    // Keep the existing CUDA caveat: skip the strict check during measure,
+    // and ensure backend compatibility otherwise.
+    if (!measuring) {
+        GGML_ASSERT(!view->buffer || view->buffer->backend == alloc->buffer->backend);
         ggml_backend_buffer_init_tensor(alloc->buffer, view);
     }
 }
